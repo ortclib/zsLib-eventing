@@ -2016,7 +2016,7 @@ namespace zsLib
               ss << "  typedef DurationType * DurationTypeRawPtr;\n";
               ss << "  if (0 == handle) return 0;\n";
               if (isTime) {
-                ss << "  auto t = day_point(jan / 1 / 1601);\n";
+                ss << "  auto t = sys_days(jan / 1 / 1601);\n";
                 ss << "  auto diff = (*reinterpret_cast<DurationTypeRawPtr>(handle)) - t;\n";
                 ss << "  auto nano = ::zsLib::toNanoseconds(diff);\n";
                 ss << "  return SafeInt<int64_t>(nano.count() / static_cast<::zsLib::Nanoseconds::rep>(100));\n";
@@ -2034,7 +2034,7 @@ namespace zsLib
               ss << "  typedef DurationType::rep DurationTypeRep;\n";
               ss << "  if (0 == handle) return;\n";
               if (isTime) {
-                ss << "  ::zsLib::Time t = day_point(jan / 1 / 1601);\n";
+                ss << "  ::zsLib::Time t = sys_days(jan / 1 / 1601);\n";
                 ss << "  auto nano = std::chrono::duration_cast<::zsLib::Time::duration>(zsLib::Nanoseconds(static_cast<::zsLib::Nanoseconds::rep>(value) * static_cast<::zsLib::Nanoseconds::rep>(100)));\n";
                 ss << "  (*reinterpret_cast<DurationTypeRawPtr>(handle)) = ::zsLib::Time(t + nano);\n";
               } else {

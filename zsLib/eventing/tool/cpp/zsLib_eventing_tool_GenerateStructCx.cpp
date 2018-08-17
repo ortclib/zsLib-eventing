@@ -991,7 +991,7 @@ namespace zsLib
           cppSS << "Windows::Foundation::DateTime Internal::Helper::ToCx(const ::zsLib::Time &value)\n";
           cppSS << "{\n";
           cppSS << "  Windows::Foundation::DateTime result {};\n";
-          cppSS << "  auto t = day_point(jan / 1 / 1601);\n";
+          cppSS << "  auto t = sys_days(jan / 1 / 1601);\n";
           cppSS << "\n";
           cppSS << "  auto diff = value - t;\n";
           cppSS << "  auto nano = ::zsLib::toNanoseconds(diff);\n";
@@ -1012,7 +1012,7 @@ namespace zsLib
           cppSS << dashedStr;
           cppSS << "::zsLib::Time Internal::Helper::FromCx(Windows::Foundation::DateTime value)\n";
           cppSS << "{\n";
-          cppSS << "  ::zsLib::Time t = day_point(jan / 1 / 1601);\n";
+          cppSS << "  ::zsLib::Time t = sys_days(jan / 1 / 1601);\n";
           cppSS << "\n";
           cppSS << "  auto nano = std::chrono::duration_cast<::zsLib::Time::duration>(zsLib::Nanoseconds(static_cast<::zsLib::Nanoseconds::rep>(value.UniversalTime) * static_cast<::zsLib::Nanoseconds::rep>(100)));\n";
           cppSS << "\n";
