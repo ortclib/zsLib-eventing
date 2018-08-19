@@ -2777,15 +2777,15 @@ namespace zsLib
             indentStr += "  ";
 
             ss << "\n";
-            ss << "#ifdef _WIN64\n";
-            ss << indentStr << "typedef float64 HelperFloat;\n";
-            ss << indentStr << "typedef int64 HelperLong;\n";
-            ss << indentStr << "typedef uint64 HelperULong;\n";
-            ss << "#else //_WIN64\n";
+            //ss << "#ifdef _WIN64\n";
+            //ss << indentStr << "typedef float64 HelperFloat;\n";
+            //ss << indentStr << "typedef int64 HelperLong;\n";
+            //ss << indentStr << "typedef uint64 HelperULong;\n";
+            //ss << "#else //_WIN64\n";
             ss << indentStr << "typedef float32 HelperFloat;\n";
             ss << indentStr << "typedef int32 HelperLong;\n";
             ss << indentStr << "typedef uint32 HelperULong;\n";
-            ss << "#endif //_WIN64\n";
+            //ss << "#endif //_WIN64\n";
             ss << "\n";
 
             ss << indentStr << "struct Throwers\n";
