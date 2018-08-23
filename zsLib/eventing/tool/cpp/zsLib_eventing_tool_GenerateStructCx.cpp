@@ -39,9 +39,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <sstream>
 
-#define ZS_WRAPPER_COMPILER_DIRECTIVE_EXCLUSIZE "EXCLUSIVE"
-
-namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zsLib_eventing_tool) } } }
+namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zslib_eventing_tool) } } }
 
 namespace zsLib
 {
@@ -61,12 +59,22 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateStructCx::HelperFile
-        #pragma mark
+        //
+        // GenerateStructCx::HelperFile
+        //
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::HelperFile::includeHeader(const String &headerFile)
+        GenerateStructCx::HelperFile::HelperFile() noexcept
+        {
+        }
+
+        //---------------------------------------------------------------------
+        GenerateStructCx::HelperFile::~HelperFile() noexcept
+        {
+        }
+
+        //---------------------------------------------------------------------
+        void GenerateStructCx::HelperFile::includeHeader(const String &headerFile) noexcept
         {
           auto &ss = mHeaderIncludeSS;
 
@@ -77,7 +85,48 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::HelperFile::includeCpp(const String &headerFile)
+        void GenerateStructCx::HelperFile::includeCpp(const String &headerFile) noexcept
+        {
+          auto &ss = mCppIncludeSS;
+
+          if (mCppAlreadyIncluded.end() != mCppAlreadyIncluded.find(headerFile)) return;
+          mCppAlreadyIncluded.insert(headerFile);
+
+          ss << "#include " << headerFile << "\n";
+        }
+
+        //---------------------------------------------------------------------
+        void GenerateStructCx::HelperFile::specialThrow(TypePtr rejectionType) noexcept
+        {
+          if (!rejectionType) return;
+
+          if (mAlreadyThrows.end() != mAlreadyThrows.find(rejectionType)) return;
+          mAlreadyThrows.insert(rejectionType);
+          auto &ss = mHeaderThrowersSS;
+
+          ss << mHeaderIndentStr << "  void customThrow(" << GenerateStructCx::getCppType(false, rejectionType) << " error) noexcept(false);\n";
+        }
+
+        //---------------------------------------------------------------------
+        //---------------------------------------------------------------------
+        //---------------------------------------------------------------------
+        //---------------------------------------------------------------------
+        //
+        // GenerateStructCx::StructFile
+        //
+
+        //---------------------------------------------------------------------
+        GenerateStructCx::StructFile::StructFile() noexcept
+        {
+        }
+
+        //---------------------------------------------------------------------
+        GenerateStructCx::StructFile::~StructFile() noexcept
+        {
+        }
+
+        //---------------------------------------------------------------------
+        void GenerateStructCx::StructFile::includeCpp(const String &headerFile) noexcept
         {
           auto &ss = mCppIncludeSS;
 
@@ -91,53 +140,48 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateStructCx::StructFile
-        #pragma mark
-
-        //---------------------------------------------------------------------
-        void GenerateStructCx::StructFile::includeCpp(const String &headerFile)
-        {
-          auto &ss = mCppIncludeSS;
-
-          if (mCppAlreadyIncluded.end() != mCppAlreadyIncluded.find(headerFile)) return;
-          mCppAlreadyIncluded.insert(headerFile);
-
-          ss << "#include " << headerFile << "\n";
-        }
-
-        //---------------------------------------------------------------------
-        //---------------------------------------------------------------------
-        //---------------------------------------------------------------------
-        //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateStructCx
-        #pragma mark
+        //
+        // GenerateStructCx
+        //
 
 
         //-------------------------------------------------------------------
-        GenerateStructCx::GenerateStructCx() : IDLCompiler(Noop{})
+        GenerateStructCx::GenerateStructCx() noexcept : IDLCompiler(Noop{})
         {
         }
 
         //-------------------------------------------------------------------
-        GenerateStructCxPtr GenerateStructCx::create()
+        GenerateStructCxPtr GenerateStructCx::create() noexcept
         {
           return make_shared<GenerateStructCx>();
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::fixName(const String &originalName)
+        String GenerateStructCx::fixName(
+                                         const String &originalName,
+                                         const char *splitter,
+                                         const char *combiner
+                                         ) noexcept
         {
           if (originalName.isEmpty()) return String();
-          String firstLetter = originalName.substr(0, 1);
-          String remaining = originalName.substr(1);
-          firstLetter.toUpper();
-          return firstLetter + remaining;
+
+          UseHelper::SplitMap splits;
+          UseHelper::split(originalName, splits, splitter);
+
+          for (auto iter = splits.begin(); iter != splits.end(); ++iter) {
+            auto &value = (*iter).second;
+
+            String firstLetter = value.substr(0, 1);
+            String remaining = value.substr(1);
+            firstLetter.toUpper();
+            value = firstLetter + remaining;
+          }
+
+          return UseHelper::combine(splits, combiner);
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::fixNamePath(ContextPtr context)
+        String GenerateStructCx::fixNamePath(ContextPtr context) noexcept
         {
           ContextList parents;
           while (context) {
@@ -170,7 +214,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::fixStructName(StructPtr structObj)
+        String GenerateStructCx::fixStructName(StructPtr structObj) noexcept
         {
           typedef std::list<StructPtr> StructList;
 
@@ -200,7 +244,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::fixMethodDeclaration(ContextPtr context)
+        String GenerateStructCx::fixMethodDeclaration(ContextPtr context) noexcept
         {
           String result = fixNamePath(context);
           if ("::" == result.substr(0, 2)) {
@@ -210,7 +254,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::fixMethodDeclaration(StructPtr derivedStruct, ContextPtr context)
+        String GenerateStructCx::fixMethodDeclaration(StructPtr derivedStruct, ContextPtr context) noexcept
         {
           String result = fixMethodDeclaration(derivedStruct);
           if (!context) return result;
@@ -223,7 +267,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::fixStructFileName(StructPtr structObj)
+        String GenerateStructCx::fixStructFileName(StructPtr structObj) noexcept
         {
           auto result = fixNamePath(structObj);
           result.replaceAll("::", "_");
@@ -232,13 +276,13 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::getStructInitName(StructPtr structObj)
+        String GenerateStructCx::getStructInitName(StructPtr structObj) noexcept
         {
           return GenerateStructHeader::getStructInitName(structObj);
         }
 
         //-------------------------------------------------------------------
-        String GenerateStructCx::getCxStructInitName(StructPtr structObj)
+        String GenerateStructCx::getCxStructInitName(StructPtr structObj) noexcept
         {
           String namePathStr = fixNamePath(structObj);
           namePathStr.replaceAll("::", "_");
@@ -247,7 +291,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::fixEnumName(EnumTypePtr enumObj)
+        String GenerateStructCx::fixEnumName(EnumTypePtr enumObj) noexcept
         {
           StructPtr structObj;
           auto parent = enumObj->getParent();
@@ -281,7 +325,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::fixArgumentName(const String &originalName)
+        String GenerateStructCx::fixArgumentName(const String &originalName) noexcept
         {
           if (originalName == "delegate") return "delegateValue";
           if (originalName == "event") return "eventValue";
@@ -293,7 +337,7 @@ namespace zsLib
                                                      std::stringstream &ss,
                                                      const String &inIndentStr,
                                                      NamespacePtr namespaceObj
-                                                     )
+                                                     ) noexcept
         {
           if (!namespaceObj) return;
           if (namespaceObj->hasModifier(Modifier_Special)) return;
@@ -368,7 +412,7 @@ namespace zsLib
                                                   const String &indentStr,
                                                   StructPtr structObj,
                                                   bool &firstFound
-                                                  )
+                                                  ) noexcept
         {
           if (!structObj) return;
           if (GenerateHelper::isBuiltInType(structObj)) return;
@@ -395,7 +439,7 @@ namespace zsLib
                                                 std::stringstream &ss,
                                                 const String &indentStr,
                                                 ContextPtr context
-                                                )
+                                                ) noexcept
         {
           auto namespaceObj = context->toNamespace();
           auto structObj = context->toStruct();
@@ -429,7 +473,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        SecureByteBlockPtr GenerateStructCx::generateTypesHeader(ProjectPtr project) throw (Failure)
+        SecureByteBlockPtr GenerateStructCx::generateTypesHeader(ProjectPtr project) noexcept(false)
         {
           std::stringstream ss;
 
@@ -450,7 +494,7 @@ namespace zsLib
         void GenerateStructCx::calculateRelations(
                                                   NamespacePtr namespaceObj,
                                                   NamePathStructSetMap &ioDerivesInfo
-                                                  )
+                                                  ) noexcept
         {
           if (!namespaceObj) return;
           for (auto iter = namespaceObj->mNamespaces.begin(); iter != namespaceObj->mNamespaces.end(); ++iter) {
@@ -467,7 +511,7 @@ namespace zsLib
         void GenerateStructCx::calculateRelations(
                                                   StructPtr structObj,
                                                   NamePathStructSetMap &ioDerivesInfo
-                                                  )
+                                                  ) noexcept
         {
           if (!structObj) return;
 
@@ -481,7 +525,7 @@ namespace zsLib
             auto top = allParents.begin();
             StructPtr parentStructObj = (*top);
             allParents.erase(top);
-            
+
             if (structObj != parentStructObj) {
               insertInto(parentStructObj, currentNamePath, ioDerivesInfo);
             }
@@ -509,7 +553,7 @@ namespace zsLib
                                           StructPtr structObj,
                                           const NamePath &namePath,
                                           NamePathStructSetMap &ioDerivesInfo
-                                          )
+                                          ) noexcept
         {
           if (!structObj) return;
 
@@ -526,7 +570,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::generateSpecialHelpers(HelperFile &helperFile)
+        void GenerateStructCx::generateSpecialHelpers(HelperFile &helperFile) noexcept
         {
           auto &derives = helperFile.mDerives;
 
@@ -542,6 +586,9 @@ namespace zsLib
           generateBinaryHelper(helperFile);
           generateExceptionHelper(helperFile);
 
+          if (derives.end() != derives.find("::zs::Days")) {
+            generateDurationHelper(helperFile, "Days");
+          }
           if (derives.end() != derives.find("::zs::Hours")) {
             generateDurationHelper(helperFile, "Hours");
           }
@@ -574,7 +621,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::generateExceptionHelper(HelperFile &helperFile)
+        void GenerateStructCx::generateExceptionHelper(HelperFile &helperFile) noexcept
         {
           auto &ss = helperFile.mHeaderStructSS;
           auto dashedStr = GenerateHelper::getDashedComment(String());
@@ -602,7 +649,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::generateBasicTypesHelper(HelperFile &helperFile)
+        void GenerateStructCx::generateBasicTypesHelper(HelperFile &helperFile) noexcept
         {
           auto &ss = helperFile.mHeaderStructSS;
           auto &cppSS = helperFile.mCppBodySS;
@@ -754,7 +801,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::generateBinaryHelper(HelperFile &helperFile)
+        void GenerateStructCx::generateBinaryHelper(HelperFile &helperFile) noexcept
         {
           auto &ss = helperFile.mHeaderStructSS;
           auto &cppSS = helperFile.mCppBodySS;
@@ -771,7 +818,7 @@ namespace zsLib
           cppSS << "Platform::Array<byte>^ Internal::Helper::ToCx_Binary(const SecureByteBlock &value)\n";
           cppSS << "{\n";
           cppSS << "  if (!value.BytePtr()) return nullptr;\n";
-          cppSS << "  return ref new Platform::Array<byte>((unsigned char *)value.BytePtr(), value.SizeInBytes());\n";
+          cppSS << "  return ref new Platform::Array<byte>((unsigned char *)value.BytePtr(), SafeInt<int>(value.SizeInBytes()));\n";
           cppSS << "}\n";
           cppSS << "\n";
 
@@ -802,7 +849,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::generateStringHelper(HelperFile &helperFile)
+        void GenerateStructCx::generateStringHelper(HelperFile &helperFile) noexcept
         {
           auto &ss = helperFile.mHeaderStructSS;
           auto &cppSS = helperFile.mCppBodySS;
@@ -870,7 +917,7 @@ namespace zsLib
         void GenerateStructCx::generateDurationHelper(
                                                       HelperFile &helperFile,
                                                       const String &durationType
-                                                      )
+                                                      ) noexcept
         {
           auto &ss = helperFile.mHeaderStructSS;
           auto &cppSS = helperFile.mCppBodySS;
@@ -927,7 +974,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::generateTimeHelper(HelperFile &helperFile)
+        void GenerateStructCx::generateTimeHelper(HelperFile &helperFile) noexcept
         {
           auto &ss = helperFile.mHeaderStructSS;
           auto &cppSS = helperFile.mCppBodySS;
@@ -944,7 +991,7 @@ namespace zsLib
           cppSS << "Windows::Foundation::DateTime Internal::Helper::ToCx(const ::zsLib::Time &value)\n";
           cppSS << "{\n";
           cppSS << "  Windows::Foundation::DateTime result {};\n";
-          cppSS << "  auto t = day_point(jan / 1 / 1601);\n";
+          cppSS << "  auto t = sys_days(jan / 1 / 1601);\n";
           cppSS << "\n";
           cppSS << "  auto diff = value - t;\n";
           cppSS << "  auto nano = ::zsLib::toNanoseconds(diff);\n";
@@ -965,18 +1012,17 @@ namespace zsLib
           cppSS << dashedStr;
           cppSS << "::zsLib::Time Internal::Helper::FromCx(Windows::Foundation::DateTime value)\n";
           cppSS << "{\n";
-          cppSS << "  ::zsLib::Time t = day_point(jan / 1 / 1601);\n";
+          cppSS << "  ::zsLib::Time t = sys_days(jan / 1 / 1601);\n";
           cppSS << "\n";
-          cppSS << "  auto nano = ::zsLib::toMilliseconds(zsLib::Nanoseconds(static_cast<::zsLib::Nanoseconds::rep>(value.UniversalTime) * static_cast<::zsLib::Nanoseconds::rep>(100)));\n";
+          cppSS << "  auto nano = std::chrono::duration_cast<::zsLib::Time::duration>(zsLib::Nanoseconds(static_cast<::zsLib::Nanoseconds::rep>(value.UniversalTime) * static_cast<::zsLib::Nanoseconds::rep>(100)));\n";
           cppSS << "\n";
-          cppSS << "  auto result = t + nano;\n";
-          cppSS << "  return zsLib::timeSinceEpoch(result);\n";
+          cppSS << "  return t + nano;\n";
           cppSS << "}\n";
           cppSS << "\n";
         }
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::generatePromiseHelper(HelperFile &helperFile)
+        void GenerateStructCx::generatePromiseHelper(HelperFile &helperFile) noexcept
         {
           helperFile.includeHeader("<ppltasks.h>");
 
@@ -1029,7 +1075,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void GenerateStructCx::generatePromiseWithHelper(HelperFile &helperFile)
+        void GenerateStructCx::generatePromiseWithHelper(HelperFile &helperFile) noexcept
         {
           helperFile.includeHeader("<ppltasks.h>");
 
@@ -1047,16 +1093,16 @@ namespace zsLib
                 auto templatedStruct = (*iterPromise).second;
                 if (!templatedStruct) continue;
 
-                auto foundType = templatedStruct->mTemplateArguments.begin();
-                if (foundType == templatedStruct->mTemplateArguments.end()) continue;
+                auto foundArgType = templatedStruct->mTemplateArguments.begin();
+                if (foundArgType == templatedStruct->mTemplateArguments.end()) continue;
 
-                auto resolveType = (*foundType);
+                auto resolveType = (*foundArgType);
                 if (!resolveType) continue;
 
                 TypePtr rejectType;
                 {
-                  (++foundType);
-                  if (foundType != templatedStruct->mTemplateArguments.end()) rejectType = *foundType;
+                  (++foundArgType);
+                  if (foundArgType != templatedStruct->mTemplateArguments.end()) rejectType = *foundArgType;
                 }
 
                 String promiseWithStr = "PromiseWithHolderPtr";
@@ -1133,7 +1179,7 @@ namespace zsLib
         void GenerateStructCx::generateDefaultPromiseRejections(
                                                                 HelperFile &helperFile,
                                                                 const String &indentStr
-                                                                )
+                                                                ) noexcept
         {
           auto foundType = helperFile.mGlobal->toContext()->findType("::zs::PromiseRejectionReason");
           if (foundType) {
@@ -1144,10 +1190,10 @@ namespace zsLib
                 auto templatedStruct = (*iterRej).second;
                 if (!templatedStruct) continue;
 
-                auto foundType = templatedStruct->mTemplateArguments.begin();
-                if (foundType == templatedStruct->mTemplateArguments.end()) continue;
+                auto foundArgType = templatedStruct->mTemplateArguments.begin();
+                if (foundArgType == templatedStruct->mTemplateArguments.end()) continue;
 
-                auto rejectionType = (*foundType);
+                auto rejectionType = (*foundArgType);
                 if (!rejectionType) continue;
                 generatePromiseRejection(helperFile, indentStr, rejectionType);
               }
@@ -1160,14 +1206,21 @@ namespace zsLib
                                                         HelperFile &helperFile,
                                                         const String &indentStr,
                                                         TypePtr rejectionType
-                                                        )
+                                                        ) noexcept
         {
           if (!rejectionType) return;
           auto &cppSS = helperFile.mCppBodySS;
+
+          helperFile.specialThrow(rejectionType);
+
           cppSS << indentStr << "{\n";
           cppSS << indentStr << "  auto reasonHolder = promise->reason< ::zsLib::AnyHolder< " << getCppType(false, rejectionType) << " > >();\n";
           cppSS << indentStr << "  if (reasonHolder) {\n";
-          cppSS << indentStr << "    tce_.set_exception(::Internal::Helper::" << getToCxName(rejectionType) << "(reasonHolder->value_));\n";
+          cppSS << indentStr << "    try {\n";
+          cppSS << indentStr << "      ::Internal::Helper::Throwers::singleton().customThrow(reasonHolder->value_);\n";
+          cppSS << indentStr << "    } catch (Platform::Exception ^throwObject) {\n";
+          cppSS << indentStr << "      tce_.set_exception(throwObject);\n";
+          cppSS << indentStr << "    }\n";
           cppSS << indentStr << "  }\n";
           cppSS << indentStr << "}\n";
         }
@@ -1177,7 +1230,7 @@ namespace zsLib
                                                     HelperFile &helperFile,
                                                     NamespacePtr namespaceObj,
                                                     const String &inIndentStr
-                                                    )
+                                                    ) noexcept
         {
           if (!namespaceObj) return;
 
@@ -1208,7 +1261,7 @@ namespace zsLib
                                                  HelperFile &helperFile,
                                                  StructPtr structObj,
                                                  const String &inIndentStr
-                                                 )
+                                                 ) noexcept
         {
           if (!structObj) return;
 
@@ -1244,7 +1297,7 @@ namespace zsLib
         void GenerateStructCx::generateForStandardStruct(
                                                          HelperFile &helperFile,
                                                          StructPtr structObj
-                                                         )
+                                                         ) noexcept
         {
           auto &ss = helperFile.mHeaderStructSS;
           auto &cppSS = helperFile.mCppBodySS;
@@ -1288,7 +1341,7 @@ namespace zsLib
         void GenerateStructCx::generateStructFile(
                                                   HelperFile &helperFile,
                                                   StructPtr structObj
-                                                  )
+                                                  ) noexcept
         {
           if (!structObj) return;
 
@@ -1311,22 +1364,23 @@ namespace zsLib
           auto &indentStr = structFile.mHeaderStructIndentStr;
 
           includeSS << "// " ZS_EVENTING_GENERATED_BY "\n\n";
-          includeSS << "#pragma once\n\n";
-          includeSS << "#include \"types.h\"\n";
 
           String ifdefName = (structObj->hasModifier(Modifier_Special) ? "CX_USE_GENERATED_" : "CX_USE_CUSTOM_") + getCxStructInitName(structObj);
           ifdefName.toUpper();
 
           includeSS << "\n";
           includeSS << "#" << (structObj->hasModifier(Modifier_Special) ? "ifndef" : "ifdef") << " " << ifdefName << "\n";
-          includeSS << "#include <wrapper/cx/" << filename << ".h>\n";
+          includeSS << "#include <wrapper/override/cx/" << filename << ".h>\n";
           includeSS << "#else // " << ifdefName << "\n";
+          includeSS << "\n";
+          includeSS << "#pragma once\n\n";
+          includeSS << "#include \"types.h\"\n";
 
           cppIncludeSS << "// " ZS_EVENTING_GENERATED_BY "\n\n";
 
           cppIncludeSS << "\n";
           cppIncludeSS << "#" << (structObj->hasModifier(Modifier_Special) ? "ifndef" : "ifdef") << " " << ifdefName << "\n";
-          cppIncludeSS << "#include \"" << filename << ".h\"\n";
+          cppIncludeSS << "#include <wrapper/override/cx/" << filename << ".cpp>\n";
           cppIncludeSS << "#else // " << ifdefName << "\n";
 
           structFile.includeCpp("\"cx_Helpers.h\"");
@@ -1372,12 +1426,10 @@ namespace zsLib
             }
           }
 
-          bool hasConstructor = false;
           bool hasEvents = false;
           for (auto iter = structObj->mMethods.begin(); iter != structObj->mMethods.end(); ++iter) {
             auto method = (*iter);
             if (method->hasModifier(Modifier_Method_EventHandler)) hasEvents = true;
-            if (method->hasModifier(Modifier_Method_Ctor)) hasConstructor = true;
           }
 
           ss << "\n";
@@ -1495,7 +1547,7 @@ namespace zsLib
                   if (!foundCast) {
                     pubSS << "Windows::Foundation::Metadata::DefaultOverloadAttribute, ";
                   }
-                  pubSS << "Windows::Foundation::Metadata::OverloadAttribute(\"CastAs" << fixStructName(foundStruct);
+                  pubSS << "Windows::Foundation::Metadata::OverloadAttribute(\"CastFrom" << fixStructName(foundStruct);
                   pubSS << "\")]\n";
                   pubSS << indentStr << "static " << fixStructName(structObj) << "^ Cast(" << getCxType(false, foundStruct) << " value);\n";
                   foundCast = true;
@@ -1515,7 +1567,7 @@ namespace zsLib
             if (foundCast) pubSS << "\n";
           }
 
-          generateStructMethods(helperFile, structFile, structObj, structObj, true, hasEvents);
+          generateStructMethods(helperFile, structFile, structObj, structObj, hasEvents);
 
           includeSS << "\n";
           includeSS << prestructDelegateSS.str();
@@ -1535,13 +1587,13 @@ namespace zsLib
             }
           }
 
-          includeSS << "#endif //" << (structObj->hasModifier(Modifier_Special) ? "ifdef" : "ifndef") << " " << ifdefName << "\n";
+          includeSS << "#endif //" << (structObj->hasModifier(Modifier_Special) ? "ifndef" : "") << " " << ifdefName << "\n";
 
 
           cppIncludeSS << "\n";
           cppIncludeSS << cppSS.str();
           cppIncludeSS << "\n";
-          cppIncludeSS << "#endif //" << (structObj->hasModifier(Modifier_Special) ? "ifdef" : "ifndef") << " " << ifdefName << "\n";
+          cppIncludeSS << "#endif //" << (structObj->hasModifier(Modifier_Special) ? "ifndef" : "") << " " << ifdefName << "\n";
 
           String outputnameHeader = UseHelper::fixRelativeFilePath(helperFile.mHeaderFileName, filename + ".h");
           String outputnameCpp = UseHelper::fixRelativeFilePath(helperFile.mHeaderFileName, filename + ".cpp");
@@ -1555,9 +1607,8 @@ namespace zsLib
                                                      StructFile &structFile,
                                                      StructPtr derivedStructObj,
                                                      StructPtr structObj,
-                                                     bool createConstructors,
                                                      bool hasEvents
-                                                     )
+                                                     ) noexcept
         {
           if (!structObj) return;
 
@@ -1573,11 +1624,11 @@ namespace zsLib
           {
             auto relatedType = (*iter).second;
             if (!relatedType) continue;
-            
+
             {
               auto subStructObj = relatedType->toStruct();
               if (subStructObj) {
-                generateStructMethods(helperFile, structFile, derivedStructObj, subStructObj, false, hasEvents);
+                generateStructMethods(helperFile, structFile, derivedStructObj, subStructObj, hasEvents);
               }
             }
           }
@@ -1595,12 +1646,10 @@ namespace zsLib
             bool isToString = ("ToString" == fixName(method->mName)) && ("::string" == method->mResult->getPathName()) && (0 == method->mArguments.size());
             bool isStatic = method->hasModifier(Modifier_Static);
 
-            String delegateName;
-
             std::stringstream implSS;
 
-            if (!createConstructors) {
-              if ((isCtor) || (isEvent)) continue;
+            if (derivedStructObj != structObj) {
+              if ((isCtor) || (isEvent) || (isStatic)) continue;
             }
 
             if (firstOutput) {
@@ -1670,17 +1719,17 @@ namespace zsLib
               cppSS << dashedStr;
               cppSS << "void " << fixNamePath(structObj) << "::WrapperObserverImpl::" << method->mName << "(";
 
-              String delegateName = fixName(method->getModifierValue(Modifier_Method_EventHandler, 0));
-              if (!delegateName.hasData()) {
-                delegateName = fixStructName(structObj) + "_";
+              String delegateNameStr = fixName(method->getModifierValue(Modifier_Method_EventHandler, 0));
+              if (!delegateNameStr.hasData()) {
+                delegateNameStr = fixStructName(structObj) + "_";
                 if (method->hasModifier(Modifier_AltName)) {
-                  delegateName += fixName(method->getModifierValue(Modifier_AltName, 0));
+                  delegateNameStr += fixName(method->getModifierValue(Modifier_AltName, 0));
                 } else {
-                  delegateName += fixName(method->mName);
+                  delegateNameStr += fixName(method->mName);
                 }
-                delegateName += "Delegate";
+                delegateNameStr += "Delegate";
               }
-              prestructDelegateSS << structFile.mHeaderIndentStr << "public delegate void " << delegateName << "(";
+              prestructDelegateSS << structFile.mHeaderIndentStr << "public delegate void " << delegateNameStr << "(";
               if (method->mArguments.size() > 1) {
                 observerSS << "\n";
                 observerSS << indentStr << "  ";
@@ -1690,7 +1739,7 @@ namespace zsLib
                 prestructDelegateSS << structFile.mHeaderIndentStr << "  ";
               }
 
-              headerMethodsSS << indentStr << "event " << delegateName << "^ " << fixName(method->mName) << ";\n";
+              headerMethodsSS << indentStr << "event " << delegateNameStr << "^ " << fixName(method->mName) << ";\n";
             } else {
               cppSS << dashedStr;
 
@@ -1750,7 +1799,13 @@ namespace zsLib
               auto throwType = (*iterThrows);
               if (!throwType) continue;
               implSS << "  } catch(const " << getCppType(false, throwType) << " &e) {\n";
-              implSS << "    throw ::Internal::Helper::" << getToCxName(throwType) << "(e);\n";
+              if (isDefaultExceptionType(throwType)) {
+                implSS << "    throw ::Internal::Helper::" << getToCxName(throwType) << "(e);\n";
+              } else {
+                implSS << "    ::Internal::Helper::Throwers::singleton().customThrow(e);\n";
+              }
+
+              helperFile.specialThrow(throwType);
             }
             if (method->mThrows.size() > 0) {
               implSS << "  }\n";
@@ -1813,6 +1868,9 @@ namespace zsLib
             bool hasSetter = property->hasModifier(Modifier_Property_Setter);
             bool isStatic = property->hasModifier(Modifier_Static);
 
+            if (derivedStructObj != structObj) {
+              if (isStatic) continue;
+            }
             if ((!structObj->hasModifier(Modifier_Struct_Dictionary)) || (isStatic))
             {
               if ((!hasGetter) && (!hasSetter)) hasGetter = hasSetter = true;
@@ -1896,7 +1954,7 @@ namespace zsLib
         void GenerateStructCx::generateForEnum(
                                                HelperFile &helperFile,
                                                EnumTypePtr enumObj
-                                               )
+                                               ) noexcept
         {
           auto &ss = helperFile.mHeaderStructSS;
           auto &cppSS = helperFile.mCppBodySS;
@@ -1933,7 +1991,7 @@ namespace zsLib
         void GenerateStructCx::generateForList(
                                                HelperFile &helperFile,
                                                StructPtr structObj
-                                               )
+                                               ) noexcept
         {
           helperFile.includeHeader("<collection.h>");
 
@@ -1948,16 +2006,16 @@ namespace zsLib
 
             auto found = templatedStruct->mTemplateArguments.begin();
             if (found == templatedStruct->mTemplateArguments.end()) {
-              ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_SYSTEM_ERROR, "Unexpected template missing type: \"" + templatedStruct->getPathName());
+              ZS_ASSERT_FAIL("unexpected template missing type");
             }
 
             TypePtr foundType = (*found);
-            ss << indentStr << "static Windows::Foundation::Collections::IVector< " << getCxType(false, foundType, true) << " >^ " << getToCxName(templatedStruct) << "(shared_ptr< std::list< " << getCppType(false, foundType) << " > > values);\n";
-            ss << indentStr << "static shared_ptr< std::list< " << getCppType(false, foundType) << "> > " << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IVector< " << getCxType(false, foundType) << " >^ values);\n";
+            ss << indentStr << "static Windows::Foundation::Collections::IVectorView< " << getCxType(false, foundType, true) << " >^ " << getToCxName(templatedStruct) << "(shared_ptr< std::list< " << getCppType(false, foundType) << " > > values);\n";
+            ss << indentStr << "static shared_ptr< std::list< " << getCppType(false, foundType) << "> > " << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IVectorView< " << getCxType(false, foundType) << " >^ values);\n";
             ss << "\n";
 
             cppSS << dashedStr;
-            cppSS << "Windows::Foundation::Collections::IVector< " << getCxType(false, foundType, true) << " >^ Internal::Helper::" << getToCxName(templatedStruct) << "(shared_ptr< std::list< " << getCppType(false, foundType) << " > > values)\n";
+            cppSS << "Windows::Foundation::Collections::IVectorView< " << getCxType(false, foundType, true) << " >^ Internal::Helper::" << getToCxName(templatedStruct) << "(shared_ptr< std::list< " << getCppType(false, foundType) << " > > values)\n";
             cppSS << "{\n";
             cppSS << "  if (!values) return nullptr;\n";
             cppSS << "  auto result = ref new Platform::Collections::Vector< " << getCxType(false, foundType) << " >();\n";
@@ -1965,12 +2023,12 @@ namespace zsLib
             cppSS << "  {\n";
             cppSS << "    result->Append(" << getToCxName(foundType) << "(*iter));\n";
             cppSS << "  }\n";
-            cppSS << "  return result;\n";
+            cppSS << "  return result->GetView();\n";
             cppSS << "}\n";
             cppSS << "\n";
 
             cppSS << dashedStr;
-            cppSS << "shared_ptr< std::list<" << getCppType(false, foundType) << "> > Internal::Helper::" << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IVector< " << getCxType(false, foundType) << " >^ values)\n";
+            cppSS << "shared_ptr< std::list<" << getCppType(false, foundType) << "> > Internal::Helper::" << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IVectorView< " << getCxType(false, foundType) << " >^ values)\n";
             cppSS << "{\n";
             cppSS << "  if (!values) return shared_ptr< std::list< " << getCppType(false, foundType) << " > >();\n";
             cppSS << "  auto result = make_shared< std::list< " << getCppType(false, foundType) << " > >();\n";
@@ -1988,7 +2046,7 @@ namespace zsLib
         void GenerateStructCx::generateForMap(
                                               HelperFile &helperFile,
                                               StructPtr structObj
-                                              )
+                                              ) noexcept
         {
           helperFile.includeHeader("<collection.h>");
 
@@ -2003,23 +2061,23 @@ namespace zsLib
 
             auto found = templatedStruct->mTemplateArguments.begin();
             if (found == templatedStruct->mTemplateArguments.end()) {
-              ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_SYSTEM_ERROR, "Unexpected template missing type: \"" + templatedStruct->getPathName());
+              ZS_ASSERT_FAIL("unexpected template missing type");
             }
 
             TypePtr keyType = (*found);
 
             ++found;
             if (found == templatedStruct->mTemplateArguments.end()) {
-              ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_SYSTEM_ERROR, "Unexpected template missing type: \"" + templatedStruct->getPathName());
+              ZS_ASSERT_FAIL("unexpected template missing type");
             }
             TypePtr valueType = (*found);
 
-            ss << indentStr << "static Windows::Foundation::Collections::IMap< " << getCxType(false, keyType, true) << ", " << getCxType(false, valueType, true)  << " >^ " << getToCxName(templatedStruct) << "(shared_ptr< std::map< " << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > > values);\n";
-            ss << indentStr << "static shared_ptr< std::map<" << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > > " << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IMap< " << getCxType(false, keyType) << ", " << getCxType(false, valueType) << " >^ values);\n";
+            ss << indentStr << "static Windows::Foundation::Collections::IMapView< " << getCxType(false, keyType, true) << ", " << getCxType(false, valueType, true)  << " >^ " << getToCxName(templatedStruct) << "(shared_ptr< std::map< " << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > > values);\n";
+            ss << indentStr << "static shared_ptr< std::map<" << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > > " << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IMapView< " << getCxType(false, keyType) << ", " << getCxType(false, valueType) << " >^ values);\n";
             ss << "\n";
 
             cppSS << dashedStr;
-            cppSS << "Windows::Foundation::Collections::IMap< " << getCxType(false, keyType, true) << ", " << getCxType(false, valueType, true) << " >^ Internal::Helper::" << getToCxName(templatedStruct) << "(shared_ptr< std::map< " << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > > values)\n";
+            cppSS << "Windows::Foundation::Collections::IMapView< " << getCxType(false, keyType, true) << ", " << getCxType(false, valueType, true) << " >^ Internal::Helper::" << getToCxName(templatedStruct) << "(shared_ptr< std::map< " << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > > values)\n";
             cppSS << "{\n";
             cppSS << "  if (!values) return nullptr;\n";
             cppSS << "  auto result = ref new Platform::Collections::Map< " << getCxType(false, keyType) << ", " << getCxType(false, valueType)  << " >();\n";
@@ -2027,19 +2085,19 @@ namespace zsLib
             cppSS << "  {\n";
             cppSS << "    result->Insert(" << getToCxName(keyType) << "((*iter).first), " << getToCxName(valueType) << "((*iter).second));\n";
             cppSS << "  }\n";
-            cppSS << "  return result;\n";
+            cppSS << "  return result->GetView();\n";
             cppSS << "}\n";
             cppSS << "\n";
 
             cppSS << dashedStr;
-            cppSS << "shared_ptr< std::map<" << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > > Internal::Helper::" << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IMap< " << getCxType(false, keyType) << ", " << getCxType(false, valueType) << " >^ values)\n";
+            cppSS << "shared_ptr< std::map<" << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > > Internal::Helper::" << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IMapView< " << getCxType(false, keyType) << ", " << getCxType(false, valueType) << " >^ values)\n";
             cppSS << "{\n";
             cppSS << "  if (!values) return shared_ptr< std::map< " << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > >();\n";
-            cppSS << "  auto result = make_shared< std::map<" << getCppType(false, keyType) << ", " << getCppType(false, valueType) << "> >();\n";
-            cppSS << "  std::for_each(Windows::Foundation::Collections::begin(values), Windows::Foundation::Collections::end(values), [](Windows::Foundation::Collections::IKeyValuePair< " << getCxType(false, keyType) << ", " << getCxType(false, valueType) << " >^ pair)\n";
+            cppSS << "  auto result = make_shared< std::map< " << getCppType(false, keyType) << ", " << getCppType(false, valueType) << " > >();\n";
+            cppSS << "  std::for_each(Windows::Foundation::Collections::begin(values), Windows::Foundation::Collections::end(values), [result](Windows::Foundation::Collections::IKeyValuePair< " << getCxType(false, keyType) << ", " << getCxType(false, valueType) << " >^ pair)\n";
             cppSS << "  {\n";
-            cppSS << "    result[" << getFromCxName(keyType) << "(pair->Key)] = " << getFromCxName(valueType) << "[pair->Value];\n";
-            cppSS << "  }\n";
+            cppSS << "    (*result)[" << getFromCxName(keyType) << "(pair->Key)] = " << getFromCxName(valueType) << "(pair->Value);\n";
+            cppSS << "  });\n";
             cppSS << "  return result;\n";
             cppSS << "}\n";
             cppSS << "\n";
@@ -2050,7 +2108,7 @@ namespace zsLib
         void GenerateStructCx::generateForSet(
                                               HelperFile &helperFile,
                                               StructPtr structObj
-                                              )
+                                              ) noexcept
         {
           helperFile.includeHeader("<collection.h>");
 
@@ -2065,17 +2123,17 @@ namespace zsLib
 
             auto found = templatedStruct->mTemplateArguments.begin();
             if (found == templatedStruct->mTemplateArguments.end()) {
-              ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_SYSTEM_ERROR, "Unexpected template missing type: \"" + templatedStruct->getPathName());
+              ZS_ASSERT_FAIL("unexpected template missing type");
             }
 
             TypePtr keyType = (*found);
 
-            ss << indentStr << "static Windows::Foundation::Collections::IMap< " << getCxType(false, keyType, true) << ", Platform::Object^ >^ " << getToCxName(templatedStruct) << "(shared_ptr< std::set< " << getCppType(false, keyType) << " > > values);\n";
-            ss << indentStr << "static shared_ptr< std::set< " << getCppType(false, keyType) << " > > " << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IMap< " << getCxType(false, keyType) << ", Platform::Object^ >^ values);\n";
+            ss << indentStr << "static Windows::Foundation::Collections::IMapView< " << getCxType(false, keyType, true) << ", Platform::Object^ >^ " << getToCxName(templatedStruct) << "(shared_ptr< std::set< " << getCppType(false, keyType) << " > > values);\n";
+            ss << indentStr << "static shared_ptr< std::set< " << getCppType(false, keyType) << " > > " << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IMapView< " << getCxType(false, keyType) << ", Platform::Object^ >^ values);\n";
             ss << "\n";
 
             cppSS << dashedStr;
-            cppSS << "Windows::Foundation::Collections::IMap< " << getCxType(false, keyType, true) << ", Platform::Object^ >^ Internal::Helper::" << getToCxName(templatedStruct) << "(shared_ptr< std::set< " << getCppType(false, keyType) << " > > values)\n";
+            cppSS << "Windows::Foundation::Collections::IMapView< " << getCxType(false, keyType, true) << ", Platform::Object^ >^ Internal::Helper::" << getToCxName(templatedStruct) << "(shared_ptr< std::set< " << getCppType(false, keyType) << " > > values)\n";
             cppSS << "{\n";
             cppSS << "  if (!values) return nullptr;\n";
             cppSS << "  auto result = ref new Platform::Collections::Map< " << getCxType(false, keyType) << ", Platform::Object^ >();\n";
@@ -2083,12 +2141,12 @@ namespace zsLib
             cppSS << "  {\n";
             cppSS << "    result->Insert(" << getToCxName(keyType) << "(*iter), nullptr);\n";
             cppSS << "  }\n";
-            cppSS << "  return result;\n";
+            cppSS << "  return result->GetView();\n";
             cppSS << "}\n";
             cppSS << "\n";
 
             cppSS << dashedStr;
-            cppSS << "shared_ptr< std::set< " << getCppType(false, keyType) << " > > Internal::Helper::" << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IMap< " << getCxType(false, keyType) << ", Platform::Object^ >^ values)\n";
+            cppSS << "shared_ptr< std::set< " << getCppType(false, keyType) << " > > Internal::Helper::" << getFromCxName(templatedStruct) << "(Windows::Foundation::Collections::IMapView< " << getCxType(false, keyType) << ", Platform::Object^ >^ values)\n";
             cppSS << "{\n";
             cppSS << "  if (!values) return shared_ptr< std::set< " << getCppType(false, keyType) << " > >();\n";
             cppSS << "  auto result = make_shared< std::set<" << getCppType(false, keyType) << "> >();\n";
@@ -2107,7 +2165,7 @@ namespace zsLib
                                                       bool isOptional,
                                                       BasicTypePtr type,
                                                       bool isReturnType
-                                                      )
+                                                      ) noexcept
         {
           if (!type) return String();
 
@@ -2128,7 +2186,7 @@ namespace zsLib
             case IEventingTypes::PredefinedTypedef_ulong:     return makeCxOptional(isOptional, "Internal::Helper::HelperULong");
             case IEventingTypes::PredefinedTypedef_long:
             case IEventingTypes::PredefinedTypedef_slong:     return makeCxOptional(isOptional, "Internal::Helper::HelperLong");
-            case IEventingTypes::PredefinedTypedef_ulonglong: return makeCxOptional(isOptional, "int64");
+            case IEventingTypes::PredefinedTypedef_ulonglong: return makeCxOptional(isOptional, "uint64");
             case IEventingTypes::PredefinedTypedef_longlong:
             case IEventingTypes::PredefinedTypedef_slonglong: return makeCxOptional(isOptional, "int64");
             case IEventingTypes::PredefinedTypedef_uint8:     return makeCxOptional(isOptional, "uint8");
@@ -2168,17 +2226,37 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::makeCxOptional(bool isOptional, const String &value)
+        String GenerateStructCx::makeCxOptional(bool isOptional, const String &value) noexcept
         {
           if (!isOptional) return value;
           return "Platform::IBox< " + value + " >^";
         }
 
         //---------------------------------------------------------------------
+        bool GenerateStructCx::isDefaultExceptionType(TypePtr type)
+        {
+          if (!type) return false;
+
+          auto structType = type->toStruct();
+          if (!structType) return false;
+
+          if (structType->mGenerics.size() > 0) return false;
+
+          if (!structType->hasModifier(Modifier_Special)) return false;
+
+          String comparison("::zs::exceptions::");
+          String specialName = structType->getPathName();
+
+          specialName = specialName.substr(0, comparison.length());
+
+          return comparison == specialName;
+        }
+
+        //---------------------------------------------------------------------
         String GenerateStructCx::getCppType(
                                             bool isOptional,
                                             TypePtr type
-                                            )
+                                            ) noexcept
         {
           return GenerateStructHeader::getWrapperTypeString(isOptional, type);
         }
@@ -2188,7 +2266,7 @@ namespace zsLib
                                            bool isOptional,
                                            TypePtr type,
                                            bool isReturnType
-                                           )
+                                           ) noexcept
         {
           if (!type) return String();
 
@@ -2197,7 +2275,7 @@ namespace zsLib
           {
             auto typedefType = type->toTypedefType();
             if (typedefType) {
-              ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_INVALID_CONTENT, "Typedef failed to resolve to original type: " + typedefType->getPathName());
+              ZS_ASSERT_FAIL("typedef failed to resolve to original type");
             }
           }
 
@@ -2229,6 +2307,7 @@ namespace zsLib
                 if ("::zs::Seconds" == specialName) return makeCxOptional(isOptional, "Windows::Foundation::TimeSpan");
                 if ("::zs::Minutes" == specialName) return makeCxOptional(isOptional, "Windows::Foundation::TimeSpan");
                 if ("::zs::Hours" == specialName) return makeCxOptional(isOptional, "Windows::Foundation::TimeSpan");
+                if ("::zs::Days" == specialName) return makeCxOptional(isOptional, "Windows::Foundation::TimeSpan");
               }
               return makeCxOptional(false, fixNamePath(structType) + "^");
             }
@@ -2249,20 +2328,17 @@ namespace zsLib
               String specialTemplatePost;
 
               {
-                auto parent = type->getParent();
-                if (parent) {
-                  auto parentStruct = parent->toStruct();
-                  if (parentStruct) {
-                    if (parentStruct->hasModifier(Modifier_Special)) {
-                      specialName = parentStruct->getPathName();
-                      if ("::std::set" == specialName) {
-                        templatedTypeStr = "Windows::Foundation::Collections::IMap< ";
-                        specialTemplatePost = ", Platform::Object^";
-                      }
-                      if ("::std::list" == specialName) templatedTypeStr = "Windows::Foundation::Collections::IVector< ";
-                      if ("::std::map" == specialName) templatedTypeStr = "Windows::Foundation::Collections::IMap< ";
-                      if ("::zs::PromiseWith" == specialName) templatedTypeStr = "Windows::Foundation::IAsyncOperation< ";
+                auto parentStruct = templatedType->getParentStruct();
+                if (parentStruct) {
+                  if (parentStruct->hasModifier(Modifier_Special)) {
+                    specialName = parentStruct->getPathName();
+                    if ("::std::set" == specialName) {
+                      templatedTypeStr = "Windows::Foundation::Collections::IMapView< ";
+                      specialTemplatePost = ", Platform::Object^";
                     }
+                    if ("::std::list" == specialName) templatedTypeStr = "Windows::Foundation::Collections::IVectorView< ";
+                    if ("::std::map" == specialName) templatedTypeStr = "Windows::Foundation::Collections::IMapView< ";
+                    if ("::zs::PromiseWith" == specialName) templatedTypeStr = "Windows::Foundation::IAsyncOperation< ";
                   }
                 }
               }
@@ -2288,7 +2364,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::getCxAttributes(const StringList &attributes)
+        String GenerateStructCx::getCxAttributes(const StringList &attributes) noexcept
         {
           if (attributes.size() < 1) return String();
 
@@ -2313,14 +2389,14 @@ namespace zsLib
         String GenerateStructCx::getCxAttributesLine(
                                                      const String &linePrefix,
                                                      const StringList &attributes
-                                                     )
+                                                     ) noexcept
         {
           if (attributes.size() < 1) return String();
           return linePrefix + getCxAttributes(attributes) + "\n";
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::getToFromCxName(TypePtr type)
+        String GenerateStructCx::getToFromCxName(TypePtr type) noexcept
         {
           if (!type) return String();
 
@@ -2330,19 +2406,20 @@ namespace zsLib
             auto basicType = type->toBasicType();
             if (basicType) {
               switch (basicType->mBaseType) {
-              case IEventingTypes::PredefinedTypedef_bool:      return "Boolean";
+                case IEventingTypes::PredefinedTypedef_bool:      return "Boolean";
 
-              case IEventingTypes::PredefinedTypedef_binary:    return "Binary";
+                case IEventingTypes::PredefinedTypedef_binary:    return "Binary";
 
-              case IEventingTypes::PredefinedTypedef_ulong:     return "HelperULong";
-              case IEventingTypes::PredefinedTypedef_long:
-              case IEventingTypes::PredefinedTypedef_slong:     return "HelperLong";
+                case IEventingTypes::PredefinedTypedef_ulong:     return "HelperULong";
+                case IEventingTypes::PredefinedTypedef_long:
+                case IEventingTypes::PredefinedTypedef_slong:     return "HelperLong";
 
-              case IEventingTypes::PredefinedTypedef_float:     return "HelperFloat";
+                case IEventingTypes::PredefinedTypedef_float:     return "HelperFloat";
 
-              case IEventingTypes::PredefinedTypedef_string:
-              case IEventingTypes::PredefinedTypedef_astring:
-              case IEventingTypes::PredefinedTypedef_wstring:   return "String";
+                case IEventingTypes::PredefinedTypedef_string:
+                case IEventingTypes::PredefinedTypedef_astring:
+                case IEventingTypes::PredefinedTypedef_wstring:   return "String";
+                default:                                          break;
               }
               auto result = getBasicCxTypeString(false, basicType);
               return fixName(result);
@@ -2369,6 +2446,7 @@ namespace zsLib
               if ("::zs::Seconds" == specialName) return String("Seconds");
               if ("::zs::Minutes" == specialName) return String("Minutes");
               if ("::zs::Hours" == specialName) return String("Hours");
+              if ("::zs::Days" == specialName) return String("Days");
 
               if ("::zs::PromiseWith" == specialName) return String("PromiseWith");
               if ("::std::set" == specialName) return String("Set");
@@ -2397,14 +2475,14 @@ namespace zsLib
                 if (result.hasData()) result += "_";
                 result += typeResult;
               }
+              return result;
             }
-            return result;
           }
           return String();
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::getToCxName(TypePtr type)
+        String GenerateStructCx::getToCxName(TypePtr type) noexcept
         {
           if (!type) return "ToCx";
           String result = getToFromCxName(type);
@@ -2413,7 +2491,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::getFromCxName(TypePtr type)
+        String GenerateStructCx::getFromCxName(TypePtr type) noexcept
         {
           if (!type) return "FromCx";
           String result = getToFromCxName(type);
@@ -2422,10 +2500,20 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
+        GenerateStructCx::IncludeProcessedInfo::IncludeProcessedInfo() noexcept
+        {
+        }
+
+        //---------------------------------------------------------------------
+        GenerateStructCx::IncludeProcessedInfo::~IncludeProcessedInfo() noexcept
+        {
+        }
+
+        //---------------------------------------------------------------------
         void GenerateStructCx::includeCppForType(
                                                  StructFile &structFile,
                                                  TypePtr type
-                                                 )
+                                                 ) noexcept
         {
           IncludeProcessedInfo info;
           includeCppForType(info, structFile, type);
@@ -2436,7 +2524,7 @@ namespace zsLib
                                                  IncludeProcessedInfo &processed,
                                                  StructFile &structFile,
                                                  TypePtr type
-                                                 )
+                                                 ) noexcept
         {
           if (!type) return;
 
@@ -2470,6 +2558,7 @@ namespace zsLib
               if ("::zs::Seconds" == specialName) return;
               if ("::zs::Minutes" == specialName) return;
               if ("::zs::Hours" == specialName) return;
+              if ("::zs::Days" == specialName) return;
 
               if ("::std::list" == specialName) return;
               if ("::std::map" == specialName) return;
@@ -2493,13 +2582,13 @@ namespace zsLib
             }
           }
         }
-        
+
         //---------------------------------------------------------------------
         void GenerateStructCx::includeTemplatedStructForType(
                                                              IncludeProcessedInfo &processed,
                                                              StructFile &structFile,
                                                              StructPtr structObj
-                                                             )
+                                                             ) noexcept
         {
           if (!structObj) return;
 
@@ -2555,7 +2644,7 @@ namespace zsLib
                                                              IncludeProcessedInfo &processed,
                                                              StructFile &structFile,
                                                              TemplatedStructTypePtr templatedStructObj
-                                                             )
+                                                             ) noexcept
         {
           if (!templatedStructObj) return;
 
@@ -2587,18 +2676,18 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateStructHeader::IIDLCompilerTarget
-        #pragma mark
+        //
+        // GenerateStructHeader::IIDLCompilerTarget
+        //
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::targetKeyword()
+        String GenerateStructCx::targetKeyword() noexcept
         {
           return String("cx");
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructCx::targetKeywordHelp()
+        String GenerateStructCx::targetKeywordHelp() noexcept
         {
           return String("Generate C++/CX UWP wrapper");
         }
@@ -2607,11 +2696,10 @@ namespace zsLib
         void GenerateStructCx::targetOutput(
                                             const String &inPathStr,
                                             const ICompilerTypes::Config &config
-                                            ) throw (Failure)
+                                            ) noexcept(false)
         {
           typedef std::stack<NamespacePtr> NamespaceStack;
-          typedef std::stack<String> StringList;
-
+          
           String pathStr(UseHelper::fixRelativeFilePath(inPathStr, String("wrapper")));
 
           try {
@@ -2674,7 +2762,7 @@ namespace zsLib
           }
 
           {
-            auto &ss = helperFile.mHeaderStructSS;
+            auto &ss = helperFile.mHeaderThrowersSS;
             auto &finalSS = helperFile.mHeaderFinalSS;
             auto &indentStr = helperFile.mHeaderIndentStr;
 
@@ -2689,22 +2777,36 @@ namespace zsLib
             indentStr += "  ";
 
             ss << "\n";
-            ss << "#ifdef _WIN64\n";
-            ss << indentStr << "typedef float64 HelperFloat;\n";
-            ss << indentStr << "typedef int64 HelperLong;\n";
-            ss << indentStr << "typedef uint64 HelperULong;\n";
-            ss << "#else //_WIN64\n";
+            //ss << "#ifdef _WIN64\n";
+            //ss << indentStr << "typedef float64 HelperFloat;\n";
+            //ss << indentStr << "typedef int64 HelperLong;\n";
+            //ss << indentStr << "typedef uint64 HelperULong;\n";
+            //ss << "#else //_WIN64\n";
             ss << indentStr << "typedef float32 HelperFloat;\n";
             ss << indentStr << "typedef int32 HelperLong;\n";
             ss << indentStr << "typedef uint32 HelperULong;\n";
-            ss << "#endif //_WIN64\n";
+            //ss << "#endif //_WIN64\n";
             ss << "\n";
+
+            ss << indentStr << "struct Throwers\n";
+            ss << indentStr << "{\n";
+            ss << indentStr << "  static Throwers &singleton() noexcept; // this must be declared and implemented somewhere in custom code\n";
+            ss << "\n";
+
             generateSpecialHelpers(helperFile);
           }
 
           generateForNamespace(helperFile, project->mGlobal, String());
 
+          {
+            auto &ss = helperFile.mHeaderThrowersSS;
+            auto &indentStr = helperFile.mHeaderIndentStr;
+            ss << indentStr << "};\n";
+            ss << "\n";
+          }
+
           helperFile.mHeaderIncludeSS << "\n";
+          helperFile.mHeaderIncludeSS << helperFile.mHeaderThrowersSS.str();
           helperFile.mHeaderIncludeSS << helperFile.mHeaderStructSS.str();
           helperFile.mHeaderIncludeSS << helperFile.mHeaderFinalSS.str();
 

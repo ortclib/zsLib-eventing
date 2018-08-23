@@ -40,7 +40,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <zsLib/ISettings.h>
 #include <zsLib/Numeric.h>
 
-namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zsLib_eventing_tool) } } }
+namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zslib_eventing_tool) } } }
 
 namespace zsLib
 {
@@ -56,7 +56,7 @@ namespace zsLib
         {
         public:
           //-------------------------------------------------------------------
-          static void installIDLTarget(IIDLCompilerTargetPtr target)
+          static void installIDLTarget(IIDLCompilerTargetPtr target) noexcept
           {
             auto pThis = singleton();
             if (!pThis) return;
@@ -65,14 +65,14 @@ namespace zsLib
           }
 
           //-------------------------------------------------------------------
-          static IDLTargetsPtr singleton()
+          static IDLTargetsPtr singleton() noexcept
           {
             static SingletonLazySharedPtr<IDLTargets> singleton(make_shared<IDLTargets>());
             return singleton.singleton();
           }
 
           //-------------------------------------------------------------------
-          static void getTargets(ICompilerTypes::IDLCompilerTargetMap &targets)
+          static void getTargets(ICompilerTypes::IDLCompilerTargetMap &targets) noexcept
           {
             auto pThis = singleton();
             if (!pThis) return;
@@ -85,7 +85,7 @@ namespace zsLib
         };
 
         //---------------------------------------------------------------------
-        void installIDLTarget(IIDLCompilerTargetPtr target)
+        void installIDLTarget(IIDLCompilerTargetPtr target) noexcept
         {
           if (!target) return;
           IDLTargets::installIDLTarget(target);
@@ -96,12 +96,63 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark ICommandLine
-      #pragma mark
+      //
+      // ICommandLineTypes::MonitorInfo
+      //
 
       //-----------------------------------------------------------------------
-      ICommandLineTypes::Flags ICommandLineTypes::toFlag(const char *value)
+      ICommandLineTypes::MonitorInfo::MonitorInfo() noexcept
+      {
+      }
+
+      //-----------------------------------------------------------------------
+      ICommandLineTypes::MonitorInfo::MonitorInfo(const MonitorInfo &source) noexcept :
+        mMonitor(source.mMonitor),
+        mQuietMode(source.mQuietMode),
+        mIPAddress(source.mIPAddress),
+        mPort(source.mPort),
+        mTimeout(source.mTimeout),
+        mJMANFiles(source.mJMANFiles),
+        mOutputJSON(source.mOutputJSON),
+        mSecret(source.mSecret),
+        mSubscribeProviders(source.mSubscribeProviders),
+        mLogLevels(source.mLogLevels)
+      {
+      }
+
+      //-----------------------------------------------------------------------
+      ICommandLineTypes::MonitorInfo::~MonitorInfo() noexcept
+      {
+      }
+
+      //-----------------------------------------------------------------------
+      ICommandLineTypes::MonitorInfo &ICommandLineTypes::MonitorInfo::operator=(const ICommandLineTypes::MonitorInfo &source) noexcept
+      {
+        mMonitor = source.mMonitor;
+        mQuietMode = source.mQuietMode;
+        mIPAddress = source.mIPAddress;
+        mPort = source.mPort;
+        mTimeout = source.mTimeout;
+        mJMANFiles = source.mJMANFiles;
+        mOutputJSON = source.mOutputJSON;
+        mSecret = source.mSecret;
+        mSubscribeProviders = source.mSubscribeProviders;
+        mLogLevels = source.mLogLevels;
+
+        return *this;
+      }
+
+
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //
+      // ICommandLine
+      //
+
+      //-----------------------------------------------------------------------
+      ICommandLineTypes::Flags ICommandLineTypes::toFlag(const char *value) noexcept
       {
         String str(value);
         for (ICommandLine::Flags index = ICommandLine::Flag_First; index <= ICommandLine::Flag_Last; index = static_cast<ICommandLine::Flags>(static_cast<std::underlying_type<ICommandLine::Flags>::type>(index) + 1)) {
@@ -112,7 +163,7 @@ namespace zsLib
       }
 
       //-----------------------------------------------------------------------
-      const char *ICommandLineTypes::toString(Flags flag)
+      const char *ICommandLineTypes::toString(Flags flag) noexcept
       {
         switch (flag)
         {
@@ -122,6 +173,7 @@ namespace zsLib
           case Flag_Question:         return "?";
           case Flag_Help:             return "h";
           case Flag_HelpAlt:          return "help";
+          case Flag_Debugger:         return "debugger";
           case Flag_Source:           return "s";
           case Flag_OutputName:       return "o";
           case Flag_Author:           return "author";
@@ -134,19 +186,21 @@ namespace zsLib
           case Flag_MonitorJSON:      return "output-json";
           case Flag_MonitorProvider:  return "provider";
           case Flag_MonitorSecret:    return "secret";
+          case Flag_MonitorLogLevel:  return "level";
         }
+        ZS_ASSERT_FAIL("unknown command line flag");
         return "unknown";
       }
 
       //-----------------------------------------------------------------------
-      void ICommandLine::outputHeader()
+      void ICommandLine::outputHeader() noexcept
       {
         output() << "zsLibEventTool (v0.1)\n";
-        output() << "(c)2016 Robin Raymond. All rights reserved.\n\n";
+        output() << "(c)2016-2018 Robin Raymond. All rights reserved.\n\n";
       }
 
       //-----------------------------------------------------------------------
-      void ICommandLine::outputHelp()
+      void ICommandLine::outputHelp() noexcept
       {
         ICompilerTypes::IDLCompilerTargetMap targets;
         internal::IDLTargets::getTargets(targets);
@@ -154,7 +208,8 @@ namespace zsLib
         output() <<
           " -?\n"
           " -h\n"
-          " -help         output this help text.\n"
+          " -help                                    - output this help text.\n"
+          " -debugger                                - redirect all output to debugger's output not to console\n"
           "\n"
           " -q                                      - suppress header\n"
           " -c            config_file_name          - input event provider json configuration file.\n"
@@ -170,8 +225,6 @@ namespace zsLib
           }
 
           output() <<
-          "                                           objc - Generate Objective-C wrapper\n"
-          "                                           android - Java on Android\n"
           " -author       \"John Q Public\"           - manifest author.\n"
           " -monitor                                - monitor for remote events\n"
           " -connect      ip                        - create an outgoing connection to eventing server IP\n"
@@ -181,6 +234,18 @@ namespace zsLib
           " -output-json                            - output events as json events to command line\n"
           " -provider     provider_name1...n        - subscribe to provider events by name\n"
           " -secret       connection_secret         - shared secret between client and server\n"
+          " -level        component_name level ...  - set component log level by name\n\n"
+          "               components:\n"
+          "               all                       - set all components to a specific log level\n"
+          "               ...                       - the name of the componenet to set the level\n\n"
+          "               levels:\n"
+          "               none                      - no logging\n"
+          "               basic                     - only most basic information is logged\n"
+          "               detail                    - add more details\n"
+          "               debug                     - sufficient for common debugging\n"
+          "               trace                     - trace the paths of execution\n"
+          "               insane                    - every possible bit of information is output\n\n"
+          "                                           NOTE: Too high a log level can impact performance\n"
           "\n";
       }
 
@@ -188,7 +253,7 @@ namespace zsLib
       StringList ICommandLine::toList(
                                       int inArgc,
                                       const char * const inArgv[]
-                                      )
+                                      ) noexcept
       {
         StringList result;
         for (auto iter = 0; iter < inArgc; ++iter) {
@@ -204,7 +269,7 @@ namespace zsLib
       StringList ICommandLine::toList(
                                       int inArgc,
                                       const wchar_t * const inArgv[]
-                                      )
+                                      ) noexcept
       {
         StringList result;
         for (auto iter = 0; iter < inArgc; ++iter) {
@@ -217,7 +282,7 @@ namespace zsLib
       }
 
       //-----------------------------------------------------------------------
-      int ICommandLine::performDefaultHandling(const StringList &arguments)
+      int ICommandLine::performDefaultHandling(const StringList &arguments) noexcept
       {
         zsLib::IHelper::setup();
         zsLib::ISettings::applyDefaults();
@@ -269,7 +334,7 @@ namespace zsLib
                                  MonitorInfo &outMonitor,
                                  ICompilerTypes::Config &outConfig,
                                  bool &outDidOutputHelp
-                                 ) throw (InvalidArgument)
+                                 ) noexcept(false)
       {
         ICompilerTypes::IDLCompilerTargetMap idlTargets;
         internal::IDLTargets::getTargets(idlTargets);
@@ -280,6 +345,9 @@ namespace zsLib
         ICommandLine::Flags flag {ICommandLine::Flag_None};
 
         String processedThusFar;
+        String incompleteLogComponet;
+
+        bool didDebugger {false};
 
         while (arguments.size() > 0)
         {
@@ -338,6 +406,15 @@ namespace zsLib
                 outputHelp();
                 return;
               }
+              case ICommandLine::Flag_Debugger:
+              {
+                if (!didDebugger) {
+                  output().installDebugger();
+                  output().uninstallStdOutput();
+                }
+                didDebugger = true;
+                goto processed_flag;
+              }
               case ICommandLine::Flag_Source:           goto process_flag;
               case ICommandLine::Flag_OutputName:       goto process_flag;
               case ICommandLine::Flag_Author:           goto process_flag;
@@ -356,6 +433,7 @@ namespace zsLib
               }
               case ICommandLine::Flag_MonitorProvider:  goto process_flag;
               case ICommandLine::Flag_MonitorSecret:    goto process_flag;
+              case ICommandLine::Flag_MonitorLogLevel:  goto process_flag;
             }
             ZS_THROW_INVALID_ARGUMENT("Internal error when processing argument: " + arg + " within context: " + processedThusFar);
           }
@@ -429,6 +507,29 @@ namespace zsLib
                 monitorInfo.mSecret = arg;
                 goto processed_flag;
               }
+              case ICommandLine::Flag_MonitorLogLevel: {
+                if (incompleteLogComponet.isEmpty()) {
+                  incompleteLogComponet = arg;
+                  goto process_flag;
+                }
+
+                Log::Level level {Log::None};
+                try {
+                  level = Log::toLevel(arg);
+                } catch (const zsLib::Exceptions::InvalidArgument &) {
+                  ZS_THROW_INVALID_ARGUMENT(String("Invalid log level when processing argument: ") + arg + " within context: " + processedThusFar);
+                }
+
+                if ("all" == incompleteLogComponet) {
+                  incompleteLogComponet = String();
+                }
+
+                monitorInfo.mLogLevels.push_back(MonitorInfo::StringLevelPair(incompleteLogComponet, level));
+                incompleteLogComponet.clear();
+
+                // continue to process log levels until the next flag
+                goto process_flag;
+              }
               default: break;
             }
 
@@ -447,6 +548,10 @@ namespace zsLib
           }
         }
 
+        if (incompleteLogComponet.hasData()) {
+          ZS_THROW_INVALID_ARGUMENT(String("Log level is missing for component: ") + incompleteLogComponet + " within context: " + processedThusFar);
+        }
+
         outMonitor = monitorInfo;
         outConfig = config;
       }
@@ -456,7 +561,7 @@ namespace zsLib
                                   MonitorInfo &monitorInfo,
                                   ICompilerTypes::Config &config,
                                   bool didOutputHelp
-                                  ) throw (InvalidArgument, NoopException)
+                                  ) noexcept(false)
       {
         if (monitorInfo.mMonitor) {
           if (!monitorInfo.mIPAddress.isAddressEmpty()) {
@@ -484,7 +589,7 @@ namespace zsLib
       void ICommandLine::process(
                                  MonitorInfo &monitor,
                                  ICompilerTypes::Config &config
-                                 ) throw (Failure)
+                                 ) noexcept(false)
       {
         if (monitor.mMonitor) {
           internal::Monitor::monitor(monitor);
@@ -498,7 +603,7 @@ namespace zsLib
       }
 
       //-----------------------------------------------------------------------
-      void ICommandLine::interrupt()
+      void ICommandLine::interrupt() noexcept
       {
         internal::Monitor::interrupt();
       }

@@ -38,6 +38,11 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <iostream>
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmicrosoft-template"
+#endif /* clang */
+
 #ifndef _WIN32
 #define TEXT(xText) xText
 #endif //_WIN32
@@ -55,9 +60,9 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark IOutputDelegate
-      #pragma mark
+      //
+      // IOutputDelegate
+      //
 
       interaction IOutputDelegate
       {
@@ -69,57 +74,38 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark StdOutputStream
-      #pragma mark
+      //
+      // StdOutputStream
+      //
 
       class StdOutputStream : public IOutputDelegate
       {
-        virtual void output(const char *str) const override
-        {
-          std::cout << str;
-        }
-
-        virtual void output(const wchar_t *str) const override
-        {
-          std::cout << str;
-        }
+        void output(const char *str) const override;
+        void output(const wchar_t *str) const override;
       };
 
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark DebugOutputStream
-      #pragma mark
+      //
+      // DebugOutputStream
+      //
 
       class DebugOutputStream : public IOutputDelegate
       {
-        //---------------------------------------------------------------------
-        virtual void output(const char *str) const override
-        {
-#ifdef _WIN32
-          OutputDebugStringA(str);
-#endif //_WIN32
-        }
+        void output(const char *str) const override;
 
-        //---------------------------------------------------------------------
-        virtual void output(const wchar_t *str) const override
-        {
-#ifdef _WIN32
-          OutputDebugStringW(str);
-#endif //_WIN32
-        }
+        void output(const wchar_t *str) const override;
       };
 
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark tool_basic_streambuf
-      #pragma mark
+      //
+      // tool_basic_streambuf
+      //
 
       template < typename T, class CharTraits = std::char_traits< T > >
       class tool_basic_streambuf : private std::basic_streambuf< T, CharTraits >
@@ -187,9 +173,9 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark tool_basic_ostream
-      #pragma mark
+      //
+      // tool_basic_ostream
+      //
 
       template < typename T, class CharTraits = std::char_traits< T > >
       class tool_basic_ostream : public std::basic_ostream< T, CharTraits >,
@@ -252,13 +238,25 @@ namespace zsLib
         //---------------------------------------------------------------------
         void installDebugger()
         {
-#ifdef _DEBUG
           AutoRecursiveLock lock(mLock);
           remove(mDebugOutputInstall);
           auto stream = make_shared<DebugOutputStream>();
           mDebugOutputInstall = createPUID();
           install(mDebugOutputInstall, stream);
-#endif //_DEBUG
+        }
+
+        //---------------------------------------------------------------------
+        void uninstallStdOutput()
+        {
+          AutoRecursiveLock lock(mLock);
+          remove(mStdOutputInstall);
+        }
+
+        //---------------------------------------------------------------------
+        void uninstallDebugger()
+        {
+          AutoRecursiveLock lock(mLock);
+          remove(mStdOutputInstall);
         }
 
       protected:
@@ -266,9 +264,9 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark tool_basic_ostream => IOutputDelegate
-        #pragma mark
+        //
+        // tool_basic_ostream => IOutputDelegate
+        //
 
         //---------------------------------------------------------------------
         virtual void output(const char *str) const override
@@ -317,3 +315,7 @@ namespace zsLib
     }
   }
 }
+
+#ifdef __clang__
+#pragma clang diagnostic ppop
+#endif /* clang */

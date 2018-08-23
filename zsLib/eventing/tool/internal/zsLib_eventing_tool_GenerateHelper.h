@@ -47,9 +47,9 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateHelper
-        #pragma mark
+        //
+        // GenerateHelper
+        //
 
         struct GenerateHelper : public IDLCompiler
         {
@@ -69,15 +69,33 @@ namespace zsLib
                                  std::stringstream &ss,
                                  bool &first
                                  );
+          static void insertBlob(
+                                 std::stringstream &ss,
+                                 const String &indentStr,
+                                 const char *blob,
+                                 bool blankLineHasIndent = false
+                                 );
 
           static bool isBuiltInType(TypePtr type);
 
           static bool hasOnlyStaticMethods(StructPtr structObj);
+          static bool hasEventHandlers(StructPtr structObj);
 
+          static bool isConstructable(StructPtr structObj);
           static bool needsDefaultConstructor(StructPtr structObj);
           static bool needsDefaultConstructor(TemplatedStructTypePtr templateObj);
 
+          static String getBasicTypeString(IEventingTypes::PredefinedTypedefs type);
           static String getBasicTypeString(BasicTypePtr type);
+
+          static String getConverstionNameString(IEventingTypes::PredefinedTypedefs type);
+          static String getConverstionNameString(BasicTypePtr type);
+
+          static bool isSafeIntType(IEventingTypes::PredefinedTypedefs type);
+          static bool isSafeIntType(BasicTypePtr type);
+
+          static bool isFloat(IEventingTypes::PredefinedTypedefs type);
+          static bool isFloat(BasicTypePtr type);
         };
 
       } // namespace internal

@@ -38,7 +38,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <zsLib/IMessageQueueManager.h>
 #include <zsLib/Numeric.h>
 
-namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zsLib_eventing_tool) } } }
+namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zslib_eventing_tool) } } }
 
 namespace zsLib
 {
@@ -58,12 +58,12 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark (helpers)
-        #pragma mark
+        //
+        // (helpers)
+        //
         
         //---------------------------------------------------------------------
-        static bool hasSingleton(bool nowHaveSingle = false)
+        static bool hasSingleton(bool nowHaveSingle = false) noexcept
         {
           static bool hasSingleton {};
           if (nowHaveSingle) hasSingleton = true;
@@ -71,7 +71,7 @@ namespace zsLib
         }
         
         //---------------------------------------------------------------------
-        static uint64_t getUnsignedValue(const USE_EVENT_DATA_DESCRIPTOR &data)
+        static uint64_t getUnsignedValue(const USE_EVENT_DATA_DESCRIPTOR &data) noexcept
         {
           if (!data.Ptr) return 0;
           
@@ -96,17 +96,16 @@ namespace zsLib
               memcpy(&value, (const void *)(data.Ptr), sizeof(uint64_t));
               return value;
             }
-            default: {
-              uint64_t value = 0;
-              memcpy(&value, (const void *)(data.Ptr), sizeof(uint64_t) > data.Size ? data.Size : sizeof(uint64_t));
-              return value;
-            }
+            default: break;
           }
-          return 0;
+
+          uint64_t value = 0;
+          memcpy(&value, (const void *)(data.Ptr), sizeof(uint64_t) > data.Size ? data.Size : sizeof(uint64_t));
+          return value;
         }
         
         //---------------------------------------------------------------------
-        static int64_t getSignedValue(const USE_EVENT_DATA_DESCRIPTOR &data)
+        static int64_t getSignedValue(const USE_EVENT_DATA_DESCRIPTOR &data) noexcept
         {
           if (!data.Ptr) return 0;
           
@@ -131,17 +130,15 @@ namespace zsLib
               memcpy(&value, (const void *)(data.Ptr), sizeof(int64_t));
               return value;
             }
-            default: {
-              int64_t value = 0;
-              memcpy(&value, (const void *)(data.Ptr), sizeof(int64_t) > data.Size ? data.Size : sizeof(int64_t));
-              return value;
-            }
+            default: break;
           }
-          return 0;
+          int64_t value = 0;
+          memcpy(&value, (const void *)(data.Ptr), sizeof(int64_t) > data.Size ? data.Size : sizeof(int64_t));
+          return value;
         }
         
         //---------------------------------------------------------------------
-        static double getFloatValue(const USE_EVENT_DATA_DESCRIPTOR &data)
+        static double getFloatValue(const USE_EVENT_DATA_DESCRIPTOR &data) noexcept
         {
           if (!data.Ptr) return 0.0f;
           
@@ -166,7 +163,7 @@ namespace zsLib
                                     const USE_EVENT_PARAMETER_DESCRIPTOR &param,
                                     const USE_EVENT_DATA_DESCRIPTOR &data,
                                     bool &outIsNumber
-                                    )
+                                    ) noexcept
         {
           outIsNumber = true;
           
@@ -223,16 +220,34 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor
-        #pragma mark
+        //
+        // Monitor::ProviderInfo
+        //
+        
+        //---------------------------------------------------------------------
+        Monitor::ProviderInfo::ProviderInfo() noexcept
+        {
+        }
+
+        //---------------------------------------------------------------------
+        Monitor::ProviderInfo::~ProviderInfo() noexcept
+        {
+        }
+
+        //---------------------------------------------------------------------
+        //---------------------------------------------------------------------
+        //---------------------------------------------------------------------
+        //---------------------------------------------------------------------
+        //
+        // Monitor
+        //
         
         //---------------------------------------------------------------------
         Monitor::Monitor(
                          const make_private &,
                          IMessageQueuePtr queue,
                          const ICommandLineTypes::MonitorInfo &monitorInfo
-                         ) :
+                         ) noexcept :
           MessageQueueAssociator(queue),
           mMonitorInfo(monitorInfo),
           mEventingAtom(zsLib::Log::registerEventingAtom("org.zsLib.eventing.tool.Monitor"))
@@ -243,16 +258,16 @@ namespace zsLib
         }
         
         //---------------------------------------------------------------------
-        Monitor::~Monitor()
+        Monitor::~Monitor() noexcept
         {
           mThisWeak.reset();
           
           for (auto iter = mCleanProviderInfos.begin(); iter != mCleanProviderInfos.end(); ++iter) {
-            auto info = (*iter);
+            auto *info = (*iter);
             
-            EventingAtomDataArray eventingArray = NULL;
-            if (Log::getEventingWriterInfo(info->mHandle, info->mProviderID, info->mProviderName, info->mProviderUniqueHash, &eventingArray)) {
-              eventingArray[mEventingAtom] = 0;
+            zsLib::Log::GetEventingWriterInfoResult result;
+            if (Log::getEventingWriterInfo(info->mHandle, result)) {
+              result.atomArray_[mEventingAtom] = 0;
             }
 
             delete (*iter);
@@ -261,13 +276,13 @@ namespace zsLib
         }
         
         //---------------------------------------------------------------------
-        void Monitor::init()
+        void Monitor::init() noexcept
         {
           IWakeDelegateProxy::create(mThisWeak.lock())->onWake();
         }
 
         //---------------------------------------------------------------------
-        MonitorPtr Monitor::create(const ICommandLineTypes::MonitorInfo &monitorInfo)
+        MonitorPtr Monitor::create(const ICommandLineTypes::MonitorInfo &monitorInfo) noexcept
         {
           auto queue = IMessageQueueManager::getMessageQueue("org.zsLib.eventing.tool.Monitor");
           auto pThis(make_shared<Monitor>(make_private{}, queue, monitorInfo));
@@ -277,7 +292,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        MonitorPtr Monitor::singleton(const ICommandLineTypes::MonitorInfo *monitorInfo)
+        MonitorPtr Monitor::singleton(const ICommandLineTypes::MonitorInfo *monitorInfo) noexcept
         {
           AutoRecursiveLock lock(*IHelper::getGlobalLock());
           hasSingleton(true);
@@ -290,12 +305,12 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor => (friends)
-        #pragma mark
+        //
+        // Monitor => (friends)
+        //
         
         //---------------------------------------------------------------------
-        void Monitor::monitor(const ICommandLineTypes::MonitorInfo &monitorInfo)
+        void Monitor::monitor(const ICommandLineTypes::MonitorInfo &monitorInfo) noexcept
         {
           auto pThis = Monitor::singleton(&monitorInfo);
           if (!pThis) return;
@@ -307,7 +322,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void Monitor::interrupt()
+        void Monitor::interrupt() noexcept
         {
           {
             AutoRecursiveLock lock(*IHelper::getGlobalLock());
@@ -329,12 +344,12 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor::ISingletonManagerDelegate
-        #pragma mark
+        //
+        // Monitor::ISingletonManagerDelegate
+        //
         
         //---------------------------------------------------------------------
-        void Monitor::notifySingletonCleanup()
+        void Monitor::notifySingletonCleanup() noexcept
         {
           internalInterrupt();
         }
@@ -343,9 +358,9 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor::ITimerDelegate
-        #pragma mark
+        //
+        // Monitor::ITimerDelegate
+        //
 
         //---------------------------------------------------------------------
         void Monitor::onTimer(ITimerPtr timer)
@@ -364,9 +379,9 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor::ITimerDelegate
-        #pragma mark
+        //
+        // Monitor::ITimerDelegate
+        //
 
         //---------------------------------------------------------------------
         void Monitor::onWake()
@@ -386,9 +401,9 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor::IRemoteEventingDelegate
-        #pragma mark
+        //
+        // Monitor::IRemoteEventingDelegate
+        //
         
         //---------------------------------------------------------------------
         void Monitor::onRemoteEventingStateChanged(
@@ -458,19 +473,22 @@ namespace zsLib
         
         //---------------------------------------------------------------------
         void Monitor::onRemoteEventingLocalDroppedEvents(
-                                                         IRemoteEventingPtr connection,
-                                                         size_t totalDropped
+                                                         ZS_MAYBE_USED() IRemoteEventingPtr connection,
+                                                         ZS_MAYBE_USED() size_t totalDropped
                                                          )
         {
+          ZS_MAYBE_USED(connection);
+          ZS_MAYBE_USED(totalDropped);
           // ignored
         }
 
         //---------------------------------------------------------------------
         void Monitor::onRemoteEventingRemoteDroppedEvents(
-                                                          IRemoteEventingPtr connection,
-                                                          size_t totalDropped
+                                                          ZS_MAYBE_USED() IRemoteEventingPtr connection,
+                                                          ZS_MAYBE_USED() size_t totalDropped
                                                           )
         {
+          ZS_MAYBE_USED(connection);
           mTotalEventsDropped = totalDropped;
         }
 
@@ -478,15 +496,15 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor::ILogEventingDelegate
-        #pragma mark
+        //
+        // Monitor::ILogEventingDelegate
+        //
 
         //---------------------------------------------------------------------
         void Monitor::notifyEventingProviderRegistered(
                                                        ProviderHandle handle,
                                                        EventingAtomDataArray eventingAtomDataArray
-                                                       )
+                                                       ) noexcept
         {
           ProviderInfo *provider = reinterpret_cast<ProviderInfo *>(eventingAtomDataArray[mEventingAtom]);
 
@@ -505,10 +523,52 @@ namespace zsLib
 
               eventingAtomDataArray[mEventingAtom] = reinterpret_cast<EventingAtomData>(provider);
 
-              if (Log::getEventingWriterInfo(handle, provider->mProviderID, provider->mProviderName, provider->mProviderUniqueHash)) {
-                auto found = mProviders.find(provider->mProviderID);
-                if (found != mProviders.end()) {
+              zsLib::Log::GetEventingWriterInfoResult result;
 
+              if (Log::getEventingWriterInfo(handle, result)) {
+
+                provider->mProviderID = result.providerID_;
+                provider->mProviderName = result.providerName_;
+                provider->mProviderUniqueHash = result.uniqueProviderHash_;
+
+                auto found = mProviders.find(provider->mProviderID);
+                if (found == mProviders.end()) {
+                  result.includeJMAN_ = true;
+                  if (Log::getEventingWriterInfo(handle, result)) {
+                    if (result.jman_.hasData()) {
+                      auto rootEl = IHelper::read(result.jman_);
+
+                      ProviderPtr providerJMAN;
+                      
+                      try {
+                        providerJMAN = Provider::create(rootEl);
+                      } catch (const InvalidContent &) {
+                        if (!mMonitorInfo.mQuietMode) {
+                          tool::output() << "[Warning] Provider \"" << result.providerName_ << "\" JMAN contains invalid content.\n";
+                        }
+                      }
+                      if (providerJMAN) {
+                        mProviders[providerJMAN->mID] = providerJMAN;
+                        found = mProviders.find(result.providerID_);
+
+                        IRemoteEventingPtr remote = mRemote;
+
+                        postClosure([remote, providerJMAN] {
+                          for (auto iterSubsystem = providerJMAN->mSubsystems.begin(); iterSubsystem != providerJMAN->mSubsystems.end(); ++iterSubsystem) {
+                            auto subsystem = (*iterSubsystem).second;
+                            remote->setRemoteLevel(subsystem->mName, subsystem->mLevel, true);
+                          }
+                        });
+                      } else {
+                        if (!mMonitorInfo.mQuietMode) {
+                          tool::output() << "[Warning] Provider \"" << result.providerName_ << "\" JMAN failed to load.\n";
+                        }
+                      }
+                    }
+                  }
+                }
+
+                if (found != mProviders.end()) {
                   auto existingProvider = (*found).second;
 
                   if (existingProvider->mUniqueHash == provider->mProviderUniqueHash) {
@@ -550,7 +610,7 @@ namespace zsLib
         void Monitor::notifyEventingProviderUnregistered(
                                                          ProviderHandle handle,
                                                          EventingAtomDataArray eventingAtomDataArray
-                                                         )
+                                                         ) noexcept
         {
           ProviderInfo *provider = reinterpret_cast<ProviderInfo *>(eventingAtomDataArray[mEventingAtom]);
           if (!provider) return;
@@ -561,13 +621,13 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor::ILogEventingDelegate
-        #pragma mark
+        //
+        // Monitor::ILogEventingDelegate
+        //
         
         //---------------------------------------------------------------------
         void Monitor::notifyWriteEvent(
-                                      ProviderHandle handle,
+                                      ZS_MAYBE_USED() ProviderHandle handle,
                                       EventingAtomDataArray eventingAtomDataArray,
                                       Severity severity,
                                       Level level,
@@ -575,15 +635,16 @@ namespace zsLib
                                       EVENT_PARAMETER_DESCRIPTOR_HANDLE paramDescriptor,
                                       EVENT_DATA_DESCRIPTOR_HANDLE dataDescriptor,
                                       size_t dataDescriptorCount
-                                      )
+                                      ) noexcept
         {
+          ZS_MAYBE_USED(handle);
           static const size_t skipStartLength = strlen("{\"event\":");
           static const size_t skipEndLength = strlen("}");
           
           ProviderInfo *provider = reinterpret_cast<ProviderInfo *>(eventingAtomDataArray[mEventingAtom]);
           if (!provider) return;
 
-          ++mTotalEvents;
+          size_t sequence = (++mTotalEvents);
 
           String output;
 
@@ -593,6 +654,7 @@ namespace zsLib
               auto event = (*found).second;
 
               ElementPtr rootEl = Element::create("event");
+              rootEl->adoptAsLastChild(IHelper::createElementWithNumber("sequence", string(sequence)));
               rootEl->adoptAsLastChild(IHelper::createElementWithText("severity", Log::toString(severity)));
               rootEl->adoptAsLastChild(IHelper::createElementWithText("level", Log::toString(level)));
               rootEl->adoptAsLastChild(IHelper::createElementWithTextAndJSONEncode("name", event->mName));
@@ -637,9 +699,11 @@ namespace zsLib
                 String valueName("unknown");
                 String value = valueAsString(paramDescriptor[index], dataDescriptor[index], isNumber);
                 switch (index) {
-                  case 0: valueName = "_subsystemName"; break;
-                  case 1: valueName = "_function"; break;
-                  case 2: valueName = "_line"; break;
+                  case 0: valueName = "_timestamp"; break;
+                  case 1: valueName = "_thread"; break;
+                  case 2: valueName = "_subsystemName"; break;
+                  case 3: valueName = "_function"; break;
+                  case 4: valueName = "_line"; break;
                 }
                 
                 if (isNumber) {
@@ -705,6 +769,7 @@ namespace zsLib
           
           if (!output.hasData()) {
             ElementPtr rootEl = Element::create("event");
+            rootEl->adoptAsLastChild(IHelper::createElementWithNumber("sequence", string(sequence)));
             rootEl->adoptAsLastChild(IHelper::createElementWithText("severity", Log::toString(severity)));
             rootEl->adoptAsLastChild(IHelper::createElementWithText("level", Log::toString(level)));
             rootEl->adoptAsLastChild(IHelper::createElementWithNumber("name", string(descriptor->Id)));
@@ -721,9 +786,11 @@ namespace zsLib
               String valueName("unknown");
               String value = valueAsString(paramDescriptor[index], dataDescriptor[index], isNumber);
               switch (index) {
-                case 0: valueName = "_subsystemName"; break;
-                case 1: valueName = "_function"; break;
-                case 2: valueName = "_line"; break;
+                case 0: valueName = "_timestamp"; break;
+                case 1: valueName = "_thread"; break;
+                case 2: valueName = "_subsystemName"; break;
+                case 3: valueName = "_function"; break;
+                case 4: valueName = "_line"; break;
               }
               
               if (isNumber) {
@@ -765,19 +832,19 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor => (internal)
-        #pragma mark
+        //
+        // Monitor => (internal)
+        //
 
         //---------------------------------------------------------------------
-        void Monitor::internalInterrupt()
+        void Monitor::internalInterrupt() noexcept
         {
           AutoRecursiveLock lock(mLock);
           cancel();
         }
 
         //---------------------------------------------------------------------
-        void Monitor::cancel()
+        void Monitor::cancel() noexcept
         {
           if (mShouldQuit) return;
           
@@ -821,7 +888,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void Monitor::step()
+        void Monitor::step() noexcept(false)
         {
           for (auto iter = mMonitorInfo.mJMANFiles.begin(); iter != mMonitorInfo.mJMANFiles.end(); ++iter) {
             auto fileName = (*iter);
@@ -882,8 +949,13 @@ namespace zsLib
             auto provider = (*iter).second;
             for (auto iterSubsystem = provider->mSubsystems.begin(); iterSubsystem != provider->mSubsystems.end(); ++iterSubsystem) {
               auto subsystem = (*iterSubsystem).second;
-              mRemote->setRemoteLevel(subsystem->mName, subsystem->mLevel);
+              mRemote->setRemoteLevel(subsystem->mName, subsystem->mLevel, true);
             }
+          }
+          for (auto iter = mMonitorInfo.mLogLevels.begin(); iter != mMonitorInfo.mLogLevels.end(); ++iter) {
+            auto component = (*iter).first;
+            auto level = (*iter).second;
+            mRemote->setRemoteLevel(component, level, false);
           }
         }
         

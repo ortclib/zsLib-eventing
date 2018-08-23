@@ -61,9 +61,9 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark IRemoteEventingInternalTypes
-      #pragma mark
+      //
+      // IRemoteEventingInternalTypes
+      //
       
       interaction IRemoteEventingInternalTypes
       {
@@ -79,7 +79,11 @@ namespace zsLib
           UUID mProviderID {};
           String mProviderName;
           String mProviderHash;
+          String mProviderJMAN;
           KeywordBitmaskType mBitmask {};
+
+          ProviderInfo() noexcept;
+          ~ProviderInfo() noexcept;
         };
       };
 
@@ -87,9 +91,9 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark IRemoteEventingAsyncDelegate
-      #pragma mark
+      //
+      // IRemoteEventingAsyncDelegate
+      //
       
       interaction IRemoteEventingAsyncDelegate : public IRemoteEventingInternalTypes
       {
@@ -118,9 +122,9 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark RemoteEventing
-      #pragma mark
+      //
+      // RemoteEventing
+      //
 
       class RemoteEventing : public MessageQueueAssociator,
                              public IRemoteEventing,
@@ -165,8 +169,8 @@ namespace zsLib
           MessageType_Last            = MessageType_TraceEvent
         };
         
-        static const char *toString(MessageTypes messageType);
-        MessageTypes toMessageType(const char *messageType) throw (InvalidArgument);
+        static const char *toString(MessageTypes messageType) noexcept;
+        MessageTypes toMessageType(const char *messageType) noexcept(false); // throws InvalidArgument
         
         struct SubsystemInfo
         {
@@ -189,227 +193,231 @@ namespace zsLib
                        const IPAddress &serverIP,
                        WORD listenPort,
                        Seconds maxWaitToBindTime
-                       );
-        ~RemoteEventing();
+                       ) noexcept;
+        ~RemoteEventing() noexcept;
 
       protected:
-        void init();
+        void init() noexcept;
 
       protected:
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark RemoteEventing => IRemoteEventing
-        #pragma mark
+        //
+        // RemoteEventing => IRemoteEventing
+        //
 
         static RemoteEventingPtr connectToRemote(
                                                  IRemoteEventingDelegatePtr connectionDelegate,
                                                  const IPAddress &serverIP,
                                                  const char *connectionSharedSecret
-                                                 );
+                                                 ) noexcept;
         
         static RemoteEventingPtr listenForRemote(
                                                  IRemoteEventingDelegatePtr connectionDelegate,
                                                  WORD localPort,
                                                  const char *connectionSharedSecret,
                                                  Seconds maxWaitToBindTimeInSeconds
-                                                 );
+                                                 ) noexcept;
 
-        virtual PUID getID() const override { return mID; }
+        PUID getID() const noexcept override;
 
-        virtual void shutdown() override;
+        void shutdown() noexcept override;
 
-        virtual States getState() const override;
+        States getState() const noexcept override;
 
-        virtual void setRemoteLevel(
-                                    const char *remoteSubsystemName,
-                                    Level level
-                                    ) override;
-
-        //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark RemoteEventing => IWakeDelegate
-        #pragma mark
-
-        virtual void onWake() override;
+        void setRemoteLevel(
+                            const char *remoteSubsystemName,
+                            Level level,
+                            bool setOnlyDefaultLevel
+                            ) noexcept override;
 
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark RemoteEventing => ITimerDelegate
-        #pragma mark
+        //
+        // RemoteEventing => IWakeDelegate
+        //
 
-        virtual void onTimer(ITimerPtr timer) override;
+        void onWake() override;
+
+        //---------------------------------------------------------------------
+        //
+        // RemoteEventing => ITimerDelegate
+        //
+
+        void onTimer(ITimerPtr timer) override;
         
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark RemoteEventing => ISocketDelegate
-        #pragma mark
+        //
+        // RemoteEventing => ISocketDelegate
+        //
 
-        virtual void onReadReady(SocketPtr socket) override;
-        virtual void onWriteReady(SocketPtr socket) override;
-        virtual void onException(SocketPtr socket) override;
+        void onReadReady(SocketPtr socket) override;
+        void onWriteReady(SocketPtr socket) override;
+        void onException(SocketPtr socket) override;
         
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark RemoteEventing => ILogEventingProviderDelegate
-        #pragma mark
+        //
+        // RemoteEventing => ILogEventingProviderDelegate
+        //
 
-        virtual void notifyNewSubsystem(zsLib::Subsystem &inSubsystem) override;
+        void notifyNewSubsystem(zsLib::Subsystem &inSubsystem) noexcept override;
         
-        virtual void notifyEventingProviderRegistered(
-                                                      ProviderHandle handle,
-                                                      EventingAtomDataArray eventingAtomDataArray
-                                                      ) override;
-        virtual void notifyEventingProviderUnregistered(
-                                                        ProviderHandle handle,
-                                                        EventingAtomDataArray eventingAtomDataArray
-                                                        ) override;
+        void notifyEventingProviderRegistered(
+                                              ProviderHandle handle,
+                                              EventingAtomDataArray eventingAtomDataArray
+                                              ) noexcept override;
+        void notifyEventingProviderUnregistered(
+                                                ProviderHandle handle,
+                                                EventingAtomDataArray eventingAtomDataArray
+                                                ) noexcept override;
 
-        virtual void notifyEventingProviderLoggingStateChanged(
-                                                               ProviderHandle handle,
-                                                               EventingAtomDataArray eventingAtomDataArray,
-                                                               KeywordBitmaskType keywords
-                                                               ) override;
+        void notifyEventingProviderLoggingStateChanged(
+                                                       ProviderHandle handle,
+                                                       EventingAtomDataArray eventingAtomDataArray,
+                                                       KeywordBitmaskType keywords
+                                                       ) noexcept override;
         
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark RemoteEventing => ILogEventingDelegate
-        #pragma mark
+        //
+        // RemoteEventing => ILogEventingDelegate
+        //
         
         // (duplicate) virtual void notifyNewSubsystem(zsLib::Subsystem &inSubsystem) override;
         
-        virtual void notifyWriteEvent(
-                                      ProviderHandle handle,
-                                      EventingAtomDataArray eventingAtomDataArray,
-                                      Severity severity,
-                                      Level level,
-                                      EVENT_DESCRIPTOR_HANDLE descriptor,
-                                      EVENT_PARAMETER_DESCRIPTOR_HANDLE parameterDescriptor,
-                                      EVENT_DATA_DESCRIPTOR_HANDLE dataDescriptor,
-                                      size_t dataDescriptorCount
-                                      ) override;
+        void notifyWriteEvent(
+                              ProviderHandle handle,
+                              EventingAtomDataArray eventingAtomDataArray,
+                              Severity severity,
+                              Level level,
+                              EVENT_DESCRIPTOR_HANDLE descriptor,
+                              EVENT_PARAMETER_DESCRIPTOR_HANDLE parameterDescriptor,
+                              EVENT_DATA_DESCRIPTOR_HANDLE dataDescriptor,
+                              size_t dataDescriptorCount
+                              ) noexcept override;
         
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark RemoteEventing => IRemoteEventingAsyncDelegate
-        #pragma mark
+        //
+        // RemoteEventing => IRemoteEventingAsyncDelegate
+        //
 
-        virtual void onRemoteEventingSubscribeLogger() override;
-        virtual void onRemoteEventingUnsubscribeLogger() override;
-        virtual void onRemoteEventingNewSubsystem(const char *subsystemName) override;
+        void onRemoteEventingSubscribeLogger() override;
+        void onRemoteEventingUnsubscribeLogger() override;
+        void onRemoteEventingNewSubsystem(const char *subsystemName) override;
 
-        virtual void onRemoteEventingProviderRegistered(ProviderInfo *info) override;
-        virtual void onRemoteEventingProviderUnregistered(ProviderInfo *info) override;
-        virtual void onRemoteEventingProviderLoggingStateChanged(
-                                                                 ProviderInfo *info,
-                                                                 KeywordBitmaskType keyword
-                                                                 ) override;
+        void onRemoteEventingProviderRegistered(ProviderInfo *info) override;
+        void onRemoteEventingProviderUnregistered(ProviderInfo *info) override;
+        void onRemoteEventingProviderLoggingStateChanged(
+                                                         ProviderInfo *info,
+                                                         KeywordBitmaskType keyword
+                                                         ) override;
 
-        virtual void onRemoteEventingWriteEvent(
-                                                ByteQueuePtr message,
-                                                size_t currentSize
-                                                ) override;
+        void onRemoteEventingWriteEvent(
+                                        ByteQueuePtr message,
+                                        size_t currentSize
+                                        ) override;
         
       protected:
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark RemoteEventing (internal)
-        #pragma mark
+        //
+        // RemoteEventing (internal)
+        //
 
-        static Log::Params slog(const char *message);
-        Log::Params log(const char *message);
+        static Log::Params slog(const char *message) noexcept;
+        Log::Params log(const char *message) noexcept;
         
-        bool isShuttingDown() const       { return State_ShuttingDown == mState; }
-        bool isShutdown() const           { return State_Shutdown == mState; }
-        bool isListeningMode() const      { return 0 != mListenPort; }
-        bool isConnectingMode() const     { return 0 == mListenPort; }
-        SocketPtr getActiveSocket() const { if (isListeningMode()) return mAcceptedSocket; return mConnectSocket; }
-        bool isAuthorized() const         { return MessageType_Welcome == mHandshakeState; }
+        bool isShuttingDown() const noexcept        { return State_ShuttingDown == mState; }
+        bool isShutdown() const noexcept            { return State_Shutdown == mState; }
+        bool isListeningMode() const noexcept       { return 0 != mListenPort; }
+        bool isConnectingMode() const noexcept      { return 0 == mListenPort; }
+        SocketPtr getActiveSocket() const noexcept  { if (isListeningMode()) return mAcceptedSocket; return mConnectSocket; }
+        bool isAuthorized() const noexcept          { return MessageType_Welcome == mHandshakeState; }
 
-        void disconnect();
-        void cancel();
-        void step();
+        void disconnect() noexcept;
+        void cancel() noexcept;
+        void step() noexcept;
         
-        bool stepSocketBind();
-        bool stepWaitForAccept();
+        bool stepSocketBind() noexcept;
+        bool stepWaitForAccept() noexcept;
         
-        bool stepSocketConnect();
-        bool stepWaitConnected();
-        bool stepHello();
+        bool stepSocketConnect() noexcept;
+        bool stepWaitConnected() noexcept;
+        bool stepHello() noexcept;
         
-        bool stepNotifyTimer();
-        bool stepAuthorized();
+        bool stepNotifyTimer() noexcept;
+        bool stepAuthorized() noexcept;
         
-        void setState(States state);
-        void resetConnection();
-        void prepareNewConnection();
-        void readIncomingMessage();
-        void sendOutgoingData();
+        void setState(States state) noexcept;
+        void resetConnection() noexcept;
+        void prepareNewConnection() noexcept;
+        void readIncomingMessage() noexcept;
+        void sendOutgoingData() noexcept;
 
         void sendData(
                       MessageTypes messageType,
                       const SecureByteBlock &buffer
-                      );
+                      ) noexcept;
         void sendData(
                       MessageTypes messageType,
                       const ElementPtr &rootEl
-                      );
+                      ) noexcept;
         void sendData(
                       MessageTypes messageType,
                       const std::string &message
-                      );
+                      ) noexcept;
         void sendAck(
                      const String &requestID,
                      int errorNumber = 0,
                      const char *reason = NULL
-                     );
+                     ) noexcept;
 
         void handleHandshakeMessage(
                                     MessageTypes messageType,
                                     SecureByteBlock &buffer
-                                    );
+                                    ) noexcept;
         void handleAuthorizedMessage(
                                      MessageTypes messageType,
                                      SecureByteBlock &buffer
-                                     );
+                                     ) noexcept;
         
-        void handleHello(const ElementPtr &rootEl);
-        void handleChallenge(const ElementPtr &rootEl);
-        void handleChallengeReply(const ElementPtr &rootEl);
-        void handleWelcome(const ElementPtr &rootEl);
+        void handleHello(const ElementPtr &rootEl) noexcept;
+        void handleChallenge(const ElementPtr &rootEl) noexcept;
+        void handleChallengeReply(const ElementPtr &rootEl) noexcept;
+        void handleWelcome(const ElementPtr &rootEl) noexcept;
         
-        void handleNotify(const ElementPtr &rootEl);
-        void handleNotifyGeneralInfo(const ElementPtr &rootEl);
-        void handleNotifyRemoteSubsystem(const ElementPtr &rootEl);
-        void handleNotifyRemoteProvider(const ElementPtr &rootEl);
-        void handleNotifyRemoteProviderKeywordLogging(const ElementPtr &rootEl);
-        void handleRequest(const ElementPtr &rootEl);
-        void handleRequestAck(const ElementPtr &rootEl);
+        void handleNotify(const ElementPtr &rootEl) noexcept;
+        void handleNotifyGeneralInfo(const ElementPtr &rootEl) noexcept;
+        void handleNotifyRemoteSubsystem(const ElementPtr &rootEl) noexcept;
+        void handleNotifyRemoteProvider(const ElementPtr &rootEl) noexcept;
+        void handleNotifyRemoteProviderKeywordLogging(const ElementPtr &rootEl) noexcept;
+        void handleRequest(const ElementPtr &rootEl) noexcept;
+        void handleRequestAck(const ElementPtr &rootEl) noexcept;
         
-        void handleEvent(SecureByteBlock &buffer);
+        void handleEvent(SecureByteBlock &buffer) noexcept;
         
-        void sendWelcome();
-        void sendNotify();
-        void requestSetRemoteSubsystemLevel(SubsystemInfoPtr info);
+        void sendWelcome() noexcept;
+        void sendNotify() noexcept;
+        void requestSetRemoteSubsystemLevel(
+                                            SubsystemInfoPtr info,
+                                            bool setOnlyDefaultLevel
+                                            ) noexcept;
         void requestSetRemoteEventProviderLogging(
                                                   const String &providerName,
                                                   KeywordBitmaskType bitmask
-                                                  );
+                                                  ) noexcept;
         void announceProviderToRemote(
                                       ProviderInfo *info,
                                       bool announceNew = true
-                                      );
+                                      ) noexcept;
         void announceProviderLoggingStateChangedToRemote(
                                                          ProviderInfo *info,
                                                          KeywordBitmaskType bitmask
-                                                         );
+                                                         ) noexcept;
         
-        void announceSubsystemToRemote(SubsystemInfoPtr info);
+        void announceSubsystemToRemote(SubsystemInfoPtr info) noexcept;
 
       protected:
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark RemoteEventing (data)
-        #pragma mark
+        //
+        // RemoteEventing (data)
+        //
 
         mutable RecursiveLock mLock;
         AutoPUID mID;
@@ -464,6 +472,7 @@ namespace zsLib
         SubsystemMap mLocalSubsystems;
         SubsystemMap mRemoteSubsystems;
         SubsystemMap mSetRemoteSubsystemsLevels;
+        SubsystemMap mSetDefaultRemoteSubsystemsLevels;
 
         ProviderInfoUUIDMap mLocalAnnouncedProviders;
         ProviderInfoUUIDMap mRemoteRegisteredProvidersByUUID;
@@ -490,11 +499,11 @@ ZS_DECLARE_PROXY_TYPEDEF(zsLib::eventing::internal::IRemoteEventingInternalTypes
 ZS_DECLARE_PROXY_TYPEDEF(zsLib::eventing::internal::IRemoteEventingAsyncDelegate::KeywordBitmaskType, KeywordBitmaskType)
 ZS_DECLARE_PROXY_TYPEDEF(zsLib::eventing::internal::IRemoteEventingAsyncDelegate::ByteQueuePtr, ByteQueuePtr)
 ZS_DECLARE_PROXY_TYPEDEF(std::size_t, size_t)
-ZS_DECLARE_PROXY_METHOD_0(onRemoteEventingSubscribeLogger)
-ZS_DECLARE_PROXY_METHOD_0(onRemoteEventingUnsubscribeLogger)
-ZS_DECLARE_PROXY_METHOD_1(onRemoteEventingNewSubsystem, const char *)
-ZS_DECLARE_PROXY_METHOD_1(onRemoteEventingProviderRegistered, ProviderInfo *)
-ZS_DECLARE_PROXY_METHOD_1(onRemoteEventingProviderUnregistered, ProviderInfo *)
-ZS_DECLARE_PROXY_METHOD_2(onRemoteEventingProviderLoggingStateChanged, ProviderInfo *, KeywordBitmaskType)
-ZS_DECLARE_PROXY_METHOD_2(onRemoteEventingWriteEvent, ByteQueuePtr, size_t)
+ZS_DECLARE_PROXY_METHOD(onRemoteEventingSubscribeLogger)
+ZS_DECLARE_PROXY_METHOD(onRemoteEventingUnsubscribeLogger)
+ZS_DECLARE_PROXY_METHOD(onRemoteEventingNewSubsystem, const char *)
+ZS_DECLARE_PROXY_METHOD(onRemoteEventingProviderRegistered, ProviderInfo *)
+ZS_DECLARE_PROXY_METHOD(onRemoteEventingProviderUnregistered, ProviderInfo *)
+ZS_DECLARE_PROXY_METHOD(onRemoteEventingProviderLoggingStateChanged, ProviderInfo *, KeywordBitmaskType)
+ZS_DECLARE_PROXY_METHOD(onRemoteEventingWriteEvent, ByteQueuePtr, size_t)
 ZS_DECLARE_PROXY_END()

@@ -39,7 +39,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <cryptopp/hex.h>
 
-namespace zsLib { namespace eventing { ZS_DECLARE_SUBSYSTEM(zsLib_eventing); } }
+namespace zsLib { namespace eventing { ZS_DECLARE_SUBSYSTEM(zslib_eventing); } }
 
 
 namespace zsLib
@@ -54,9 +54,9 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark Helper
-      #pragma mark
+      //
+      // Helper
+      //
 
       //-----------------------------------------------------------------------
       Log::Params Hasher::slog(const char *message)
@@ -69,9 +69,9 @@ namespace zsLib
     //-------------------------------------------------------------------------
     //-------------------------------------------------------------------------
     //-------------------------------------------------------------------------
-    #pragma mark
-    #pragma mark IHasherAlgorithm
-    #pragma mark
+    //
+    // IHasherAlgorithm
+    //
 
     //-------------------------------------------------------------------------
     String IHasherAlgorithm::digestAsString() const
@@ -83,9 +83,9 @@ namespace zsLib
     //-------------------------------------------------------------------------
     //-------------------------------------------------------------------------
     //-------------------------------------------------------------------------
-    #pragma mark
-    #pragma mark IHasher
-    #pragma mark
+    //
+    // IHasher
+    //
 
     //-------------------------------------------------------------------------
     SecureByteBlockPtr IHasher::hash(const char *str, IHasherAlgorithmPtr algorithm)

@@ -48,7 +48,7 @@ either expressed or implied, of the FreeBSD Project.
 //#include <set>
 //#include <cctype>
 
-namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zsLib_eventing_tool) } } }
+namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zslib_eventing_tool) } } }
 
 namespace zsLib
 {
@@ -68,23 +68,23 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateStructHeader
-        #pragma mark
+        //
+        // GenerateStructHeader
+        //
 
         //-------------------------------------------------------------------
-        GenerateStructHeader::GenerateStructHeader() : IDLCompiler(Noop{})
+        GenerateStructHeader::GenerateStructHeader() noexcept : IDLCompiler(Noop{})
         {
         }
 
         //-------------------------------------------------------------------
-        GenerateStructHeaderPtr GenerateStructHeader::create()
+        GenerateStructHeaderPtr GenerateStructHeader::create() noexcept
         {
           return make_shared<GenerateStructHeader>();
         }
 
         //---------------------------------------------------------------------
-        SecureByteBlockPtr GenerateStructHeader::generateTypesHeader(ProjectPtr project) throw (Failure)
+        SecureByteBlockPtr GenerateStructHeader::generateTypesHeader(ProjectPtr project) noexcept(false)
         {
           std::stringstream ss;
 
@@ -117,7 +117,7 @@ namespace zsLib
         void GenerateStructHeader::generateUsingTypes(
                                                       std::stringstream &ss,
                                                       const String &indentStr
-                                                      )
+                                                      ) noexcept
         {
           ss << indentStr << "using ::zsLib::String;\n";
           ss << indentStr << "using ::zsLib::Optional;\n";
@@ -139,7 +139,7 @@ namespace zsLib
         }
 
         //-------------------------------------------------------------------
-        String GenerateStructHeader::getStructFileName(StructPtr structObj)
+        String GenerateStructHeader::getStructFileName(StructPtr structObj) noexcept
         {
           String filename = getStructInitName(structObj);
           filename += ".h";
@@ -147,7 +147,7 @@ namespace zsLib
         }
 
         //-------------------------------------------------------------------
-        String GenerateStructHeader::getStructInitName(StructPtr structObj)
+        String GenerateStructHeader::getStructInitName(StructPtr structObj) noexcept
         {
           String namePathStr = structObj->getPathName();
           namePathStr.replaceAll("::", "_");
@@ -157,14 +157,14 @@ namespace zsLib
 
 
         //---------------------------------------------------------------------
-        String GenerateStructHeader::makeOptional(bool isOptional, const String &value)
+        String GenerateStructHeader::makeOptional(bool isOptional, const String &value) noexcept
         {
           if (!isOptional) return value;
           return "Optional< " + value + " >";
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructHeader::getWrapperTypeString(bool isOptional, TypePtr type)
+        String GenerateStructHeader::getWrapperTypeString(bool isOptional, TypePtr type) noexcept
         {
           if (!type) return String();
 
@@ -173,7 +173,7 @@ namespace zsLib
           {
             auto typedefType = type->toTypedefType();
             if (typedefType) {
-              ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_INVALID_CONTENT, "Typedef failed to resolve to original type: " + typedefType->getPathName());
+              ZS_ASSERT_FAIL("typedef failed to resolve to original type");
             }
           }
 
@@ -205,6 +205,7 @@ namespace zsLib
                 if ("::zs::Seconds" == specialName) return makeOptional(isOptional, "::zsLib::Seconds");
                 if ("::zs::Minutes" == specialName) return makeOptional(isOptional, "::zsLib::Minutes");
                 if ("::zs::Hours" == specialName) return makeOptional(isOptional, "::zsLib::Hours");
+                if ("::zs::Days" == specialName) return makeOptional(isOptional, "::zsLib::Days");
               }
 
               return makeOptional(isOptional, "wrapper" + structType->getPathName() + "Ptr");
@@ -281,7 +282,7 @@ namespace zsLib
                                                   StringSet &includedHeaders,
                                                   std::stringstream &includeSS,
                                                   std::stringstream &ss
-                                                  )
+                                                  ) noexcept
         {
           if (!structObj) return;
           if (GenerateHelper::isBuiltInType(structObj)) return;
@@ -376,9 +377,14 @@ namespace zsLib
           if (outputSubTypes) ss << "\n";
 
           if (!structObj->hasModifier(Modifier_Static)) {
-            ss << indentStr << "static " << structObj->mName << "Ptr wrapper_create();\n";
+            ss << indentStr << "static " << structObj->mName << "Ptr wrapper_create() noexcept;\n";
           }
-          ss << indentStr << "virtual ~" << structObj->mName << "() {}\n\n";
+          ss << indentStr << "virtual ~" << structObj->mName << "() noexcept {}\n";
+          if (structObj->hasModifier(Modifier_Struct_Disposable)) {
+            ss << indentStr << "virtual void wrapper_dispose() noexcept = 0;\n\n";
+          } else {
+            ss << "\n";
+          }
 
           for (auto iterStructs = structObj->mStructs.begin(); iterStructs != structObj->mStructs.end(); ++iterStructs)
           {
@@ -389,12 +395,14 @@ namespace zsLib
           std::stringstream observerSS;
           std::stringstream observerMethodsSS;
 
-          bool foundCtor = false;
           bool foundEventHandler = false;
           bool firstMethod = true;
           for (auto iterMethods = structObj->mMethods.begin(); iterMethods != structObj->mMethods.end(); ++iterMethods)
           {
             auto methodObj = (*iterMethods);
+
+            bool isStatic {methodObj->hasModifier(Modifier_Static)};
+            bool throws {methodObj->mThrows.size() > 0};
 
             if (methodObj->hasModifier(Modifier_Method_Delete)) continue;
 
@@ -412,26 +420,49 @@ namespace zsLib
                 observerMethodsSS << indentStr << "ZS_DECLARE_TYPEDEF_PTR(::std::list<WrapperObserverWeakPtr>, WrapperObserverWeakList);\n";
                 observerMethodsSS << indentStr << "WrapperObserverWeakListPtr wrapper_observers {::std::make_shared<WrapperObserverWeakList>()};\n";
                 observerMethodsSS << "\n";
-                observerMethodsSS << indentStr << "virtual void wrapper_onObserverCountChanged(size_t count) = 0;\n";
+                observerMethodsSS << indentStr << "virtual void wrapper_onObserverCountChanged(size_t count) noexcept = 0;\n";
                 observerMethodsSS << "\n";
-                observerMethodsSS << indentStr << "void wrapper_installObserver(WrapperObserverPtr observer)\n";
+                observerMethodsSS << indentStr << "void wrapper_installObserver(WrapperObserverPtr observer) noexcept\n";
                 observerMethodsSS << indentStr << "{\n";
                 observerMethodsSS << indentStr << "  size_t count {};\n";
                 observerMethodsSS << indentStr << "  {\n";
                 observerMethodsSS << indentStr << "    ::zsLib::AutoLock lock(wrapper_observerLock);\n";
-                observerMethodsSS << indentStr << "    WrapperObserverWeakListPtr oldList;\n";
-                observerMethodsSS << indentStr << "    WrapperObserverWeakListPtr newList(make_shared<WrapperObserverWeakList>());\n";
-                observerMethodsSS << indentStr << "    if (observer) { newList->push_back(observer); }\n";
+                observerMethodsSS << indentStr << "    WrapperObserverWeakListPtr oldList = wrapper_observers;\n";
+                observerMethodsSS << indentStr << "    auto newList = make_shared<WrapperObserverWeakList>();\n";
+                observerMethodsSS << indentStr << "    bool changed {false};\n";
+                observerMethodsSS << indentStr << "    if (observer) { newList->push_back(observer); changed = true; }\n";
                 observerMethodsSS << indentStr << "    for (auto iter = oldList->begin(); iter != oldList->end(); ++iter) {\n";
                 observerMethodsSS << indentStr << "      WrapperObserverPtr existingObserver = (*iter).lock();\n";
-                observerMethodsSS << indentStr << "      if (observer) { newList->push_back(existingObserver); }\n";
+                observerMethodsSS << indentStr << "      if (!observer) { changed = true; continue; }\n";
+                observerMethodsSS << indentStr << "      newList->push_back(existingObserver);\n";
                 observerMethodsSS << indentStr << "    }\n";
+                observerMethodsSS << indentStr << "    if (!changed) return;\n";
                 observerMethodsSS << indentStr << "    count = newList->size();\n";
                 observerMethodsSS << indentStr << "    wrapper_observers = newList;\n";
                 observerMethodsSS << indentStr << "  }\n";
                 observerMethodsSS << indentStr << "  wrapper_onObserverCountChanged(count);\n";
                 observerMethodsSS << indentStr << "}\n";
-                observerMethodsSS << indentStr << "void wrapper_observerClean() { wrapper_installObserver(WrapperObserverPtr()); }\n\n";
+                observerMethodsSS << indentStr << "void wrapper_uninstallObserver(WrapperObserverPtr observer) noexcept\n";
+                observerMethodsSS << indentStr << "{\n";
+                observerMethodsSS << indentStr << "  size_t count {};\n";
+                observerMethodsSS << indentStr << "  {\n";
+                observerMethodsSS << indentStr << "    ::zsLib::AutoLock lock(wrapper_observerLock);\n";
+                observerMethodsSS << indentStr << "    WrapperObserverWeakListPtr oldList = wrapper_observers;\n";
+                observerMethodsSS << indentStr << "    auto newList = make_shared<WrapperObserverWeakList>();\n";
+                observerMethodsSS << indentStr << "    bool skipped {false};\n";
+                observerMethodsSS << indentStr << "    for (auto iter = oldList->begin(); iter != oldList->end(); ++iter) {\n";
+                observerMethodsSS << indentStr << "      WrapperObserverPtr existingObserver = (*iter).lock();\n";
+                observerMethodsSS << indentStr << "      if (!observer) {skipped = true; continue;}\n";
+                observerMethodsSS << indentStr << "      if (observer == existingObserver) {skipped = true; continue;}\n";
+                observerMethodsSS << indentStr << "      newList->push_back(existingObserver);\n";
+                observerMethodsSS << indentStr << "    }\n";
+                observerMethodsSS << indentStr << "    if (!skipped) return;\n";
+                observerMethodsSS << indentStr << "    count = newList->size();\n";
+                observerMethodsSS << indentStr << "    wrapper_observers = newList;\n";
+                observerMethodsSS << indentStr << "  }\n";
+                observerMethodsSS << indentStr << "  wrapper_onObserverCountChanged(count);\n";
+                observerMethodsSS << indentStr << "}\n";
+                observerMethodsSS << indentStr << "void wrapper_observerClean() noexcept { wrapper_installObserver(WrapperObserverPtr()); }\n\n";
                 foundEventHandler = true;
               }
               observerSS << indentStr << "  virtual void " << methodObj->mName << "(";
@@ -481,18 +512,19 @@ namespace zsLib
             firstMethod = false;
 
             ss << indentStr;
-            if (methodObj->hasModifier(Modifier_Static))
+            if (isStatic)
               ss << "static ";
             else
               ss << "virtual ";
 
             if (isCtor) {
               ss << "void wrapper_init_" << getStructInitName(structObj) << "(";
-              foundCtor = true;
             } else {
               ss << getWrapperTypeString(methodObj->hasModifier(Modifier_Optional), methodObj->mResult);
               ss << " " << methodObj->mName << "(";
             }
+
+            std::stringstream maybeUsedSS;
 
             // append arguments
             {
@@ -506,24 +538,40 @@ namespace zsLib
                 if (methodObj->mArguments.size() > 1) ss << "\n" << indentStr << "  ";
 
                 String typeStr = getWrapperTypeString(argument->hasModifier(Modifier_Optional), argument->mType);
-                ss << typeStr << " " << argument->mName;
+                ss << (isStatic ? "" : (isCtor ? "" : "ZS_MAYBE_USED() ")) <<  typeStr << " " << argument->mName;
+                maybeUsedSS << "ZS_MAYBE_USED(" << argument->mName << "); ";
               }
             }
 
+            String postThrowStr;
+
             if (methodObj->mArguments.size() > 1) ss << "\n" << indentStr << "  ";
-            if (methodObj->hasModifier(Modifier_Static)) {
-              ss << ");\n";
+            ss << ") noexcept" << (throws ? "(false)" : "");
+            if (isStatic) {
+              ss << ";";
             } else {
               if (isCtor) {
-                ss << ") {}\n";
+                ss << " { " << maybeUsedSS.str() << "}";
               } else {
-                ss << ") = 0;\n";
+                ss << " = 0;";
               }
             }
+
+            if (throws) {
+              ss << " // throws ";
+              bool firstThrow{ true };
+              for (auto iterThrows = methodObj->mThrows.begin(); iterThrows != methodObj->mThrows.end(); ++iterThrows) {
+                auto throwType = (*iterThrows);
+                if (!firstThrow) ss << ", ";
+                ss << getWrapperTypeString(false, throwType);
+              }
+            }
+            ss << "\n";
+
           }
 
           if (GenerateHelper::needsDefaultConstructor(structObj)) {
-            ss << indentStr << "virtual void wrapper_init_" << getStructInitName(structObj) << "() {}\n";
+            ss << indentStr << "virtual void wrapper_init_" << getStructInitName(structObj) << "() noexcept {}\n";
           }
 
           bool isDictionary = structObj->hasModifier(Modifier_Struct_Dictionary);
@@ -551,10 +599,10 @@ namespace zsLib
               }
 
               if (hasGetter) {
-                ss << indentStr << "static " << typeStr << " get_" << propertyObj->mName << "();\n";
+                ss << indentStr << "static " << typeStr << " get_" << propertyObj->mName << "() noexcept;\n";
               }
               if (hasSetter) {
-                ss << indentStr << "static void set_" << propertyObj->mName << "(" << typeStr << " value);\n";
+                ss << indentStr << "static void set_" << propertyObj->mName << "(" << typeStr << " value) noexcept;\n";
               }
               continue;
             }
@@ -577,10 +625,10 @@ namespace zsLib
             }
 
             if (hasGetter) {
-              ss << indentStr << "virtual " << typeStr << " get_" << propertyObj->mName << "() = 0;\n";
+              ss << indentStr << "virtual " << typeStr << " get_" << propertyObj->mName << "() noexcept = 0;\n";
             }
             if (hasSetter) {
-              ss << indentStr << "virtual void set_" << propertyObj->mName << "(" << typeStr << " value) = 0;\n";
+              ss << indentStr << "virtual void set_" << propertyObj->mName << "(" << typeStr << " value) noexcept = 0;\n";
             }
           }
 
@@ -595,18 +643,18 @@ namespace zsLib
         //-------------------------------------------------------------------
         //-------------------------------------------------------------------
         //-------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateStructHeader::IIDLCompilerTarget
-        #pragma mark
+        //
+        // GenerateStructHeader::IIDLCompilerTarget
+        //
 
         //-------------------------------------------------------------------
-        String GenerateStructHeader::targetKeyword()
+        String GenerateStructHeader::targetKeyword() noexcept
         {
           return String("wrapper");
         }
 
         //-------------------------------------------------------------------
-        String GenerateStructHeader::targetKeywordHelp()
+        String GenerateStructHeader::targetKeywordHelp() noexcept
         {
           return String("C++ wrapper API");
         }
@@ -615,10 +663,10 @@ namespace zsLib
         void GenerateStructHeader::targetOutput(
                                                 const String &inPathStr,
                                                 const ICompilerTypes::Config &config
-                                                ) throw (Failure)
+                                                ) noexcept(false)
         {
           typedef std::stack<NamespacePtr> NamespaceStack;
-          typedef std::stack<String> StringList;
+          typedef std::stack<String> StringStack;
 
           String pathStr(UseHelper::fixRelativeFilePath(inPathStr, String("wrapper")));
 
@@ -672,9 +720,17 @@ namespace zsLib
               std::stringstream ss;
               std::stringstream includeSS;
               std::stringstream structSS;
-              StringList endStrings;
+              StringStack endStrings;
 
               ss << "// " ZS_EVENTING_GENERATED_BY "\n\n";
+
+              String ifdefName = (structObj->hasModifier(Modifier_Special) ? "WRAPPER_USE_GENERATED_" : "WRAPPER_USE_CUSTOM_") + getStructInitName(structObj);
+              ifdefName.toUpper();
+
+              ss << "#" << (structObj->hasModifier(Modifier_Special) ? "ifndef" : "ifdef") << " " << ifdefName << "\n";
+              ss << "#include <wrapper/override/" << filename << ">\n";
+              ss << "#else // " << ifdefName << "\n";
+
               ss << "#pragma once\n\n";
               ss << "#include \"types.h\"\n";
 
@@ -723,6 +779,7 @@ namespace zsLib
                 endStrings.pop();
               }
               ss << "} // namespace wrapper\n\n";
+              ss << "#endif //" << (structObj->hasModifier(Modifier_Special) ? "ifndef" : "") << " " << ifdefName << "\n";
 
               writeBinary(outputname, UseHelper::convertToBuffer(ss.str()));
             }

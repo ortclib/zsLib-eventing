@@ -43,7 +43,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <zsLib/Singleton.h>
 #include <zsLib/IWakeDelegate.h>
 
-#define ZS_EVENTING_TOTAL_BUILT_IN_EVENT_DATA (3)
+#define ZS_EVENTING_TOTAL_BUILT_IN_EVENT_DATA (5)
 
 
 namespace zsLib
@@ -58,9 +58,9 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Monitor
-        #pragma mark
+        //
+        // Monitor
+        //
         
         class Monitor : public MessageQueueAssociator,
                         public ISingletonManagerDelegate,
@@ -74,10 +74,10 @@ namespace zsLib
           struct make_private {};
           
         protected:
-          void init();
+          void init() noexcept;
           
-          static MonitorPtr create(const ICommandLineTypes::MonitorInfo &monitorInfo);
-          static MonitorPtr singleton(const ICommandLineTypes::MonitorInfo *monitorInfo = NULL);
+          static MonitorPtr create(const ICommandLineTypes::MonitorInfo &monitorInfo) noexcept;
+          static MonitorPtr singleton(const ICommandLineTypes::MonitorInfo *monitorInfo = NULL) noexcept;
           
         public:
           typedef zsLib::Log::Severity Severity;
@@ -103,6 +103,9 @@ namespace zsLib
             String mProviderName;
             String mProviderUniqueHash;
             EventMap mEvents;
+
+            ProviderInfo() noexcept;
+            ~ProviderInfo() noexcept;
           };
 
           typedef std::set<ProviderInfo *> ProviderInfoSet;
@@ -112,124 +115,124 @@ namespace zsLib
                   const make_private &,
                   IMessageQueuePtr queue,
                   const ICommandLineTypes::MonitorInfo &monitorInfo
-                  );
-          ~Monitor();
+                  ) noexcept;
+          ~Monitor() noexcept;
 
           //-------------------------------------------------------------------
-          #pragma mark
-          #pragma mark Monitor => (friends)
-          #pragma mark
+          //
+          // Monitor => (friends)
+          //
           
-          static void monitor(const ICommandLineTypes::MonitorInfo &monitorInfo);
-          static void interrupt();
+          static void monitor(const ICommandLineTypes::MonitorInfo &monitorInfo) noexcept;
+          static void interrupt() noexcept;
 
         protected:
           //-------------------------------------------------------------------
-          #pragma mark
-          #pragma mark Monitor::ISingletonManagerDelegate
-          #pragma mark
+          //
+          // Monitor::ISingletonManagerDelegate
+          //
           
-          virtual void notifySingletonCleanup() override;
+          void notifySingletonCleanup() noexcept override;
 
           //-------------------------------------------------------------------
-          #pragma mark
-          #pragma mark Monitor::ITimerDelegate
-          #pragma mark
+          //
+          // Monitor::ITimerDelegate
+          //
 
-          virtual void onTimer(ITimerPtr timer) override;
-
-          //-------------------------------------------------------------------
-          #pragma mark
-          #pragma mark Monitor::IWakeDelegate
-          #pragma mark
-
-          virtual void onWake() override;
+          void onTimer(ITimerPtr timer) override;
 
           //-------------------------------------------------------------------
-          #pragma mark
-          #pragma mark Monitor::IRemoteEventingDelegate
-          #pragma mark
+          //
+          // Monitor::IWakeDelegate
+          //
 
-          virtual void onRemoteEventingStateChanged(
-                                                    IRemoteEventingPtr connection,
-                                                    States state
-                                                    ) override;
+          void onWake() override;
+
+          //-------------------------------------------------------------------
+          //
+          // Monitor::IRemoteEventingDelegate
+          //
+
+          void onRemoteEventingStateChanged(
+                                            IRemoteEventingPtr connection,
+                                            States state
+                                            ) override;
           
-          virtual void onRemoteEventingRemoteSubsystem(
-                                                       IRemoteEventingPtr connection,
-                                                       const char *subsystemName
-                                                       ) override;
+          void onRemoteEventingRemoteSubsystem(
+                                               IRemoteEventingPtr connection,
+                                               const char *subsystemName
+                                               ) override;
 
-          virtual void onRemoteEventingRemoteProvider(
-                                                      UUID providerID,
-                                                      const char *providerName,
-                                                      const char *providerUniqueHash
-                                                      ) override;
-          virtual void onRemoteEventingRemoteProviderGone(const char *providerName) override;
+          void onRemoteEventingRemoteProvider(
+                                              UUID providerID,
+                                              const char *providerName,
+                                              const char *providerUniqueHash
+                                              ) override;
+          void onRemoteEventingRemoteProviderGone(const char *providerName) override;
           
-          virtual void onRemoteEventingRemoteProviderStateChange(
-                                                                 const char *providerName,
-                                                                 KeywordBitmaskType keywords
-                                                                 ) override;
+          void onRemoteEventingRemoteProviderStateChange(
+                                                         const char *providerName,
+                                                         KeywordBitmaskType keywords
+                                                         ) override;
 
-          virtual void onRemoteEventingLocalDroppedEvents(
-                                                          IRemoteEventingPtr connection,
-                                                          size_t totalDropped
-                                                          ) override;
-          virtual void onRemoteEventingRemoteDroppedEvents(
-                                                           IRemoteEventingPtr connection,
-                                                           size_t totalDropped
-                                                           ) override;
-
-          //-------------------------------------------------------------------
-          #pragma mark
-          #pragma mark Monitor::ILogEventingProviderDelegate
-          #pragma mark
-
-          virtual void notifyEventingProviderRegistered(
-                                                        ProviderHandle handle,
-                                                        EventingAtomDataArray eventingAtomDataArray
-                                                        ) override;
-          virtual void notifyEventingProviderUnregistered(
-                                                          ProviderHandle handle,
-                                                          EventingAtomDataArray eventingAtomDataArray
-                                                          ) override;
+          void onRemoteEventingLocalDroppedEvents(
+                                                  IRemoteEventingPtr connection,
+                                                  size_t totalDropped
+                                                  ) override;
+          void onRemoteEventingRemoteDroppedEvents(
+                                                   IRemoteEventingPtr connection,
+                                                   size_t totalDropped
+                                                   ) override;
 
           //-------------------------------------------------------------------
-          #pragma mark
-          #pragma mark Monitor::ILogEventingDelegate
-          #pragma mark
+          //
+          // Monitor::ILogEventingProviderDelegate
+          //
+
+          void notifyEventingProviderRegistered(
+                                                ProviderHandle handle,
+                                                EventingAtomDataArray eventingAtomDataArray
+                                                ) noexcept override;
+          void notifyEventingProviderUnregistered(
+                                                  ProviderHandle handle,
+                                                  EventingAtomDataArray eventingAtomDataArray
+                                                  ) noexcept override;
+
+          //-------------------------------------------------------------------
+          //
+          // Monitor::ILogEventingDelegate
+          //
 
           // (ignored) virtual void notifyNewSubsystem(zsLib::Subsystem &inSubsystem) {}
           
           // notification of a log event
-          virtual void notifyWriteEvent(
-                                        ProviderHandle handle,
-                                        EventingAtomDataArray eventingAtomDataArray,
-                                        Severity severity,
-                                        Level level,
-                                        EVENT_DESCRIPTOR_HANDLE descriptor,
-                                        EVENT_PARAMETER_DESCRIPTOR_HANDLE paramDescriptor,
-                                        EVENT_DATA_DESCRIPTOR_HANDLE dataDescriptor,
-                                        size_t dataDescriptorCount
-                                        ) override;
+          void notifyWriteEvent(
+                                ProviderHandle handle,
+                                EventingAtomDataArray eventingAtomDataArray,
+                                Severity severity,
+                                Level level,
+                                EVENT_DESCRIPTOR_HANDLE descriptor,
+                                EVENT_PARAMETER_DESCRIPTOR_HANDLE paramDescriptor,
+                                EVENT_DATA_DESCRIPTOR_HANDLE dataDescriptor,
+                                size_t dataDescriptorCount
+                                ) noexcept override;
 
         protected:
           //-------------------------------------------------------------------
-          #pragma mark
-          #pragma mark Monitor => (internal)
-          #pragma mark
+          //
+          // Monitor => (internal)
+          //
 
-          void internalInterrupt();
-          void cancel();
-          void step();
-          bool shouldQuit() const { return mShouldQuit; }
+          void internalInterrupt() noexcept;
+          void cancel() noexcept;
+          void step() noexcept(false); // throws Failure
+          bool shouldQuit() const noexcept { return mShouldQuit; }
 
         protected:
           //-------------------------------------------------------------------
-          #pragma mark
-          #pragma mark Monitor => (data)
-          #pragma mark
+          //
+          // Monitor => (data)
+          //
 
           mutable RecursiveLock mLock;
           AutoPUID mID;

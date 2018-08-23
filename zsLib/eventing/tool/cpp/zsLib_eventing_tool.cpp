@@ -31,7 +31,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <zsLib/eventing/tool/internal/zsLib_eventing_tool.h>
 
-namespace zsLib { namespace eventing { namespace tool { ZS_IMPLEMENT_SUBSYSTEM(zsLib_eventing_tool) } } }
+namespace zsLib { namespace eventing { namespace tool { ZS_IMPLEMENT_SUBSYSTEM(zslib_eventing_tool) } } }
 
 namespace zsLib
 {
@@ -49,6 +49,51 @@ namespace zsLib
         static tool_ostream gStream;
         return gStream;
       }
-    }
-  }
-}
+
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //
+      // StdOutputStream
+      //
+
+      //-----------------------------------------------------------------------
+      void StdOutputStream::output(const char *str) const
+      {
+        std::cout << str;
+      }
+
+      //-----------------------------------------------------------------------
+      void StdOutputStream::output(const wchar_t *str) const
+      {
+        std::cout << str;
+      }
+
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //
+      // DebugOutputStream
+      //
+
+      //---------------------------------------------------------------------
+      void DebugOutputStream::output(const char *str) const
+      {
+#ifdef _WIN32
+        OutputDebugStringA(str);
+#endif //_WIN32
+      }
+
+      //---------------------------------------------------------------------
+      void DebugOutputStream::output(const wchar_t *str) const
+      {
+#ifdef _WIN32
+        OutputDebugStringW(str);
+#endif //_WIN32
+      }
+
+    } // tool
+  } // eventing
+} // zsLib

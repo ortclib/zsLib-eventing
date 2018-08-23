@@ -82,7 +82,7 @@
     <ClCompile Include="..\..\..\..\zsLib\zsLib\cpp\zsLib_MessageQueueThreadUsingCurrentGUIMessageQueueForWindows.cpp">
       <Filter>zsLib\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\zsLib\zsLib\cpp\zsLib_MessageQueueThreadUsingCurrentGUIMessageQueueForWinRT.cpp">
+    <ClCompile Include="..\..\..\..\zsLib\zsLib\cpp\zsLib_MessageQueueThreadUsingCurrentGUIMessageQueueForWinUWP.cpp">
       <Filter>zsLib\cpp</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\zsLib\zsLib\cpp\zsLib_MessageQueueThreadUsingMainThreadMessageQueueForApple.cpp">
@@ -271,7 +271,31 @@
     <ClCompile Include="..\..\..\zsLib\eventing\tool\cpp\zsLib_eventing_tool_GenerateHelper.cpp">
       <Filter>zsLib\eventing\tool\cpp</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\zsLib\eventing\tool\cpp\zsLib_eventing_tool_GenerateJson.cpp">
+      <Filter>zsLib\eventing\tool\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\zsLib\eventing\tool\cpp\zsLib_eventing_tool_GenerateStructDotNet.cpp">
+      <Filter>zsLib\eventing\tool\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\zsLib\eventing\tool\cpp\zsLib_eventing_tool_GenerateStructC.cpp">
+      <Filter>zsLib\eventing\tool\cpp</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\zsLib\zsLib\cpp\zsLib_RangeSelection.cpp">
+      <Filter>zsLib\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\zsLib\eventing\tool\cpp\zsLib_eventing_tool_GenerateStructMsidl.cpp">
+      <Filter>zsLib\eventing\tool\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\zsLib\eventing\tool\cpp\zsLib_eventing_tool_GenerateStructCppWinrt.cpp">
+      <Filter>zsLib\eventing\tool\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\zsLib\zsLib\cpp\zsLib_MessageQueueAssociator.cpp">
+      <Filter>zsLib\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\zsLib\eventing\tool\cpp\zsLib_eventing_tool_GenerateStructPython.cpp">
+      <Filter>zsLib\eventing\tool\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\zsLib\zsLib\cpp\zsLib_MessageQueueThreadUsingCurrentGUIMessageQueueForCppWinrt.cpp">
       <Filter>zsLib\cpp</Filter>
     </ClCompile>
   </ItemGroup>
@@ -399,7 +423,7 @@
     <ClInclude Include="..\..\..\..\zsLib\zsLib\internal\zsLib_MessageQueueThreadUsingCurrentGUIMessageQueueForWindows.h">
       <Filter>zsLib\internal</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\zsLib\zsLib\internal\zsLib_MessageQueueThreadUsingCurrentGUIMessageQueueForWinRT.h">
+    <ClInclude Include="..\..\..\..\zsLib\zsLib\internal\zsLib_MessageQueueThreadUsingCurrentGUIMessageQueueForWinUWP.h">
       <Filter>zsLib\internal</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\zsLib\zsLib\internal\zsLib_MessageQueueThreadUsingMainThreadMessageQueueForApple.h">
@@ -564,11 +588,32 @@
     <ClInclude Include="..\..\..\zsLib\eventing\tool\internal\zsLib_eventing_tool_GenerateHelper.h">
       <Filter>zsLib\eventing\tool\internal</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\zsLib\eventing\tool\internal\zsLib_eventing_tool_GenerateJson.h">
+      <Filter>zsLib\eventing\tool\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\zsLib\eventing\tool\internal\zsLib_eventing_tool_GenerateStructC.h">
+      <Filter>zsLib\eventing\tool\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\zsLib\eventing\tool\internal\zsLib_eventing_tool_GenerateStructDotNet.h">
+      <Filter>zsLib\eventing\tool\internal</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\..\zsLib\zsLib\internal\zsLib_RangeSelection.h">
       <Filter>zsLib\internal</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\zsLib\zsLib\RangeSelection.h">
       <Filter>zsLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\zsLib\eventing\tool\internal\zsLib_eventing_tool_GenerateStructCppWinrt.h">
+      <Filter>zsLib\eventing\tool\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\zsLib\eventing\tool\internal\zsLib_eventing_tool_GenerateStructMsidl.h">
+      <Filter>zsLib\eventing\tool\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\zsLib\eventing\tool\internal\zsLib_eventing_tool_GenerateStructPython.h">
+      <Filter>zsLib\eventing\tool\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\zsLib\zsLib\internal\zsLib_MessageQueueThreadUsingCurrentGUIMessageQueueForCppWinrt.h">
+      <Filter>zsLib\internal</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -617,11 +662,6 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainPage.xaml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="..\..\..\..\zsLib\zsLib\license.txt">
-      <Filter>zsLib</Filter>
-    </Text>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="..\..\..\..\zsLib\zsLib\idl\std.idl">

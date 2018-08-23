@@ -47,7 +47,7 @@ either expressed or implied, of the FreeBSD Project.
 //#include <set>
 //#include <cctype>
 
-namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zsLib_eventing_tool) } } }
+namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zslib_eventing_tool) } } }
 
 namespace zsLib
 {
@@ -67,9 +67,9 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateTypesHeader
-        #pragma mark
+        //
+        // GenerateTypesHeader
+        //
 
         //-------------------------------------------------------------------
         void GenerateTypesHeader::processTypesNamespace(

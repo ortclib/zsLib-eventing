@@ -70,7 +70,33 @@ either expressed or implied, of the FreeBSD Project.
 
 #define ZS_EVENTING_METHOD_SUBSYSTEM_DEFAULT_LEVEL "SUBSYSTEM_DEFAULT_LEVEL"
 
-namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zsLib_eventing_tool) } } }
+static const char *gIgnoredMethods[] =
+{
+  "GET_LOG_LEVEL",
+  "GET_SUBSYSTEM_LOG_LEVEL",
+  "IS_LOGGING",
+  "IS_LOGGING_VALUE",
+  "IS_SUBSYSTEM_LOGGING",
+  "GET_CURRENT_SUBSYSTEM_NAME",
+  "GET_SUBSYSTEM_NAME",
+  "CHECK_IF_LOGGING",
+  "CHECK_IF_SUBSYSTEM_LOGGING",
+  "TRACE_OBJECT",
+  "TRACE_OBJECT_VALUE",
+  "TRACE_OBJECT_PTR",
+  "TRACE_OBJECT_PTR_VALUE",
+  "REGISTER_EVENT_WRITER",
+  "UNREGISTER_EVENT_WRITER",
+  "REGISTER_SUBSYSTEM_DEFAULT_LEVEL",
+  "WRITE_EVENT",
+  "EVENT_DATA_DESCRIPTOR_FILL_VALUE",
+  "EVENT_DATA_DESCRIPTOR_FILL_ASTR",
+  "EVENT_DATA_DESCRIPTOR_FILL_WSTR",
+  "EVENT_DATA_DESCRIPTOR_FILL_BUFFER",
+  NULL
+};
+
+namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zslib_eventing_tool) } } }
 
 namespace zsLib
 {
@@ -93,9 +119,9 @@ namespace zsLib
         //-----------------------------------------------------------------------
         //-----------------------------------------------------------------------
         //-----------------------------------------------------------------------
-        #pragma mark
-        #pragma mark Helpers
-        #pragma mark
+        //
+        // Helpers
+        //
 
         struct ParseState
         {
@@ -106,7 +132,7 @@ namespace zsLib
         };
 
         //-----------------------------------------------------------------------
-        static ICompilerTypes::Config &prepareProvider(ICompilerTypes::Config &config)
+        static ICompilerTypes::Config &prepareProvider(ICompilerTypes::Config &config) noexcept
         {
           if (config.mProvider) return config;
           config.mProvider = Provider::create();
@@ -114,7 +140,7 @@ namespace zsLib
         }
 
         //-----------------------------------------------------------------------
-        static bool isNumber(const char *p)
+        static bool isNumber(const char *p) noexcept
         {
           while ('\0' != *p)
           {
@@ -128,7 +154,7 @@ namespace zsLib
         static bool skipPreprocessorDirective(
                                               const char * &p,
                                               ULONG *currentLine
-                                              )
+                                              ) noexcept
         {
           if ('#' != *p) return false;
 
@@ -144,7 +170,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        static String getEventingLine(ParseState &state) throw (InvalidContentWithLine)
+        static String getEventingLine(ParseState &state) noexcept(false) // throws InvalidContentWithLine
         {
           auto prefixLength = strlen(ZS_EVENTING_PREFIX);
           state.mStartOfLineCount = 0;
@@ -229,16 +255,16 @@ namespace zsLib
           return String();
         }
 
-        //---------------------------------------------------------------------
+        //------------------------------------m---------------------------------
         static void parseLine(
                               const char *p,
                               String &outMethod,
                               ArgumentMap &outArguments,
                               ULONG lineCount
-                              ) throw (InvalidContentWithLine)
+                              ) noexcept(false) // throws InvalidContentWithLine
         {
           ZS_DECLARE_TYPEDEF_PTR(std::stringstream, StringStream);
-          
+
           const char *startPos = p;
 
           while ('\0' != *p)
@@ -348,7 +374,7 @@ namespace zsLib
                 outArguments[index] = result;
                 ++index;
               }
-              
+
               StringStreamUniPtr emptySS(new StringStream());
               ss.swap(emptySS);
               lastWasSpace = true;
@@ -363,10 +389,10 @@ namespace zsLib
                            IndexSet &indexes,
                            size_t index,
                            bool throwIfFound = true
-                           ) throw (InvalidArgument)
+                           ) noexcept(false) // throws InvalidArgument
         {
           if (0 == index) return false;
-          
+
           auto found = indexes.find(index);
           if (found == indexes.end()) {
             indexes.insert(index);
@@ -384,16 +410,16 @@ namespace zsLib
                              Index64Set &indexes,
                              uint64_t index,
                              bool throwIfFound = true
-                             ) throw (InvalidArgument)
+                             ) noexcept(false) // throws InvalidArgument
         {
           if (0 == index) return false;
-          
+
           auto found = indexes.find(index);
           if (found == indexes.end()) {
             indexes.insert(index);
             return true;
           }
-          
+
           if (throwIfFound) {
             ZS_THROW_INVALID_ARGUMENT(String("Duplicate value: ") + string(index));
           }
@@ -401,7 +427,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        static String toSymbol(const String &str)
+        static String toSymbol(const String &str) noexcept
         {
           String temp(str);
           temp.replaceAll("-", "_");
@@ -412,7 +438,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        static ElementPtr createStringEl(const String &id, const char *value)
+        static ElementPtr createStringEl(const String &id, const char *value) noexcept
         {
           ElementPtr stringEl = Element::create("string");
           stringEl->setAttribute("id", id);
@@ -421,7 +447,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        static ElementPtr createDataEl(const String &inType, const char *name)
+        static ElementPtr createDataEl(const String &inType, const char *name) noexcept
         {
           ElementPtr dataEl = Element::create("data");
           dataEl->setAttribute("inType", "win:" + inType);
@@ -430,7 +456,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        static void addEOL(NodePtr parentEl)
+        static void addEOL(NodePtr parentEl) noexcept
         {
           auto text = Text::create();
           text->setValue("\n");
@@ -441,21 +467,21 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark EventingCompiler
-        #pragma mark
+        //
+        // EventingCompiler
+        //
 
         //---------------------------------------------------------------------
         EventingCompiler::EventingCompiler(
                                            const make_private &,
                                            const Config &config
-                                           ) :
+                                           ) noexcept :
           mConfig(config)
         {
         }
 
         //---------------------------------------------------------------------
-        EventingCompiler::~EventingCompiler()
+        EventingCompiler::~EventingCompiler() noexcept
         {
         }
 
@@ -463,12 +489,12 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark EventingCompiler => ICompiler
-        #pragma mark
+        //
+        // EventingCompiler => ICompiler
+        //
 
         //---------------------------------------------------------------------
-        EventingCompilerPtr EventingCompiler::create(const Config &config)
+        EventingCompilerPtr EventingCompiler::create(const Config &config) noexcept
         {
           EventingCompilerPtr pThis(std::make_shared<EventingCompiler>(make_private{}, config));
           pThis->mThisWeak = pThis;
@@ -476,7 +502,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void EventingCompiler::process() throw (Failure, FailureWithLine)
+        void EventingCompiler::process() noexcept(false) // throws Failure, FailureWithLine
         {
           outputMacros();
           read();
@@ -486,7 +512,8 @@ namespace zsLib
               (mConfig.mProvider)) {
             writeXML(mConfig.mOutputName + "_win_etw.man", generateManifest("_win_etw.dll"));
             writeXML(mConfig.mOutputName + "_win_etw.wprp", generateWprp());
-            writeJSON(mConfig.mOutputName + ".jman", generateJsonMan());
+            auto jmanDoc = generateJsonMan();
+            writeJSON(mConfig.mOutputName + ".jman", mConfig.mOutputName + ".jman.h", jmanDoc);
             String outputXPlatformNameStr = mConfig.mOutputName + ".h";
             String outputWindowsNameStr = mConfig.mOutputName + "_win.h";
             String outputWindowsETWNameStr = mConfig.mOutputName + "_win_etw.h";
@@ -499,12 +526,12 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark EventingCompiler => (internal)
-        #pragma mark
+        //
+        // EventingCompiler => (internal)
+        //
 
         //---------------------------------------------------------------------
-        void EventingCompiler::outputMacros()
+        void EventingCompiler::outputMacros() noexcept
         {
 #if 0
           //#define ZS_EVENTING_1(xSubsystem, xSeverity, xLevel, xSymbol, xChannelID, xTaskID, xOpCode, xType1, xName1, xValue1)
@@ -577,7 +604,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void EventingCompiler::read() throw (Failure, FailureWithLine)
+        void EventingCompiler::read() noexcept(false) // throws Failure, FailureWithLine
         {
           typedef std::set<String> NameSet;
 
@@ -664,14 +691,14 @@ namespace zsLib
             if (isJSON) {
               try {
                 tool::output() << "\n[Info] Reading JSON configuration: " << fileName << "\n\n";
-                auto rootEl = UseEventingHelper::read(file);
-                if (!rootEl) {
+                auto fileRootEl = UseEventingHelper::read(file);
+                if (!fileRootEl) {
                   ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_FILE_FAILED_TO_LOAD, String("Failed to load file as JSON: ") + fileName);
                 }
                 if (!provider) {
-                  provider = Provider::create(rootEl);
+                  provider = Provider::create(fileRootEl);
                 } else {
-                  provider->parse(rootEl);
+                  provider->parse(fileRootEl);
                 }
               } catch (const InvalidContent &e) {
                 ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_INVALID_CONTENT, "Failed to parse JSON configuration: " + e.message());
@@ -777,7 +804,7 @@ namespace zsLib
                   String channelID = provider->aliasLookup(args[4]);
                   String taskID = provider->aliasLookup(args[5]);
                   String opCode = provider->aliasLookup(args[6]);
-                  
+
                   std::list<String> keywordIDs;
 
                   auto findKeywordPos = taskID.find("/");
@@ -786,7 +813,7 @@ namespace zsLib
                     taskID = taskID.substr(0, findKeywordPos);
                     taskID.trim();
                     taskID = provider->aliasLookup(taskID);
-                    
+
                     while (true)
                     {
                       findKeywordPos = keywordsStr.find("/");
@@ -795,54 +822,54 @@ namespace zsLib
                         keywordIDs.push_back(provider->aliasLookup(keywordsStr));
                         break;
                       }
-                      
+
                       String keywordID = keywordsStr.substr(0, findKeywordPos);
                       keywordID.trim();
                       keywordIDs.push_back(provider->aliasLookup(keywordID));
-                      
+
                       keywordsStr = keywordsStr.substr(findKeywordPos + 1);
                     }
                   }
 
                   // map channel
                   {
-                    auto found = provider->mChannels.find(channelID);
-                    if (found == provider->mChannels.end()) {
+                    auto foundChannel = provider->mChannels.find(channelID);
+                    if (foundChannel == provider->mChannels.end()) {
                       ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_INVALID_CONTENT, currentLine, "Event has invalid channel: " + line);
                     }
-                    event->mChannel = (*found).second;
+                    event->mChannel = (*foundChannel).second;
                   }
 
                   // map task + task opcode
                   {
                     // map task
                     {
-                      auto found = provider->mTasks.find(taskID);
-                      if (found == provider->mTasks.end()) {
+                      auto foundTask = provider->mTasks.find(taskID);
+                      if (foundTask == provider->mTasks.end()) {
                         ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_INVALID_CONTENT, currentLine, "Event has invalid task: " + line);
                       }
-                      event->mTask = (*found).second;
+                      event->mTask = (*foundTask).second;
                     }
                     // map task opcode (if revelant)
                     {
-                      auto found = event->mTask->mOpCodes.find(opCode);
-                      if (found != event->mTask->mOpCodes.end()) {
-                        event->mOpCode = (*found).second;
+                      auto foundOpCode = event->mTask->mOpCodes.find(opCode);
+                      if (foundOpCode != event->mTask->mOpCodes.end()) {
+                        event->mOpCode = (*foundOpCode).second;
                       }
                     }
                   }
-                  
+
                   // map keywords
                   {
                     for (auto iterKeywords = keywordIDs.begin(); iterKeywords != keywordIDs.end(); ++iterKeywords)
                     {
                       auto &keywordID = (*iterKeywords);
-                      auto found = provider->mKeywords.find(keywordID);
-                      if (found == provider->mKeywords.end()) {
+                      auto foundKeyword = provider->mKeywords.find(keywordID);
+                      if (foundKeyword == provider->mKeywords.end()) {
                         ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_INVALID_CONTENT, currentLine, "Event has invalid keywords: " + line);
                       }
 
-                      auto keyword = (*found).second;
+                      auto keyword = (*foundKeyword).second;
                       event->mKeywords[keyword->mName] = keyword;
                     }
                   }
@@ -850,8 +877,8 @@ namespace zsLib
                   // map opcode
                   if (!event->mOpCode)
                   {
-                    auto found = provider->mOpCodes.find(opCode);
-                    if (found == provider->mOpCodes.end()) {
+                    auto foundOpCode = provider->mOpCodes.find(opCode);
+                    if (foundOpCode == provider->mOpCodes.end()) {
                       try {
                         auto predefinedOpCode = IEventingTypes::toPredefinedOpCode(opCode);
                         event->mOpCode = IEventingTypes::OpCode::create();
@@ -863,7 +890,7 @@ namespace zsLib
                         ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_INVALID_CONTENT, currentLine, "Event has invalid opCode: " + line);
                       }
                     }
-                    event->mOpCode = (*found).second;
+                    event->mOpCode = (*foundOpCode).second;
                   }
 
                 found_predefined_opcode: {}
@@ -892,9 +919,9 @@ namespace zsLib
 
                     // check if there's a typedef
                     {
-                      auto found = provider->mTypedefs.find(type);
-                      if (found != provider->mTypedefs.end()) {
-                        dataType->mType = (*found).second->mType;
+                      auto foundTypedef = provider->mTypedefs.find(type);
+                      if (foundTypedef != provider->mTypedefs.end()) {
+                        dataType->mType = (*foundTypedef).second->mType;
                       }
                       else {
                         try {
@@ -914,12 +941,12 @@ namespace zsLib
                     dataTemplateHash = dataTemplate->hash();
 
                     {
-                      auto found = provider->mDataTemplates.find(dataTemplateHash);
-                      if (found == provider->mDataTemplates.end()) {
+                      auto foundTemplate = provider->mDataTemplates.find(dataTemplateHash);
+                      if (foundTemplate == provider->mDataTemplates.end()) {
                         provider->mDataTemplates[dataTemplateHash] = dataTemplate; // remember new template
                       }
                       else {
-                        dataTemplate = (*found).second; // replace with existing template
+                        dataTemplate = (*foundTemplate).second; // replace with existing template
                       }
                     }
                   }
@@ -927,10 +954,10 @@ namespace zsLib
                   event->mDataTemplate = dataTemplate;
 
                   {
-                    auto found = provider->mEvents.find(event->mName);
-                    if (found != provider->mEvents.end()) {
+                    auto foundEvent = provider->mEvents.find(event->mName);
+                    if (foundEvent != provider->mEvents.end()) {
                       {
-                        auto existingEvent = (*found).second;
+                        auto existingEvent = (*foundEvent).second;
                         if (event->mName != existingEvent->mName) goto reject_duplicate;
                         if (event->mSeverity != existingEvent->mSeverity) goto reject_duplicate;
                         if (event->mLevel != existingEvent->mLevel) goto reject_duplicate;
@@ -1027,9 +1054,9 @@ namespace zsLib
                   prepareProvider(mConfig);
 
                   {
-                    auto found = provider->mAliases.find(args[0]);
-                    if (found != provider->mAliases.end()) {
-                      auto existingAlias = (*found).second;
+                    auto foundEvent = provider->mAliases.find(args[0]);
+                    if (foundEvent != provider->mAliases.end()) {
+                      auto existingAlias = (*foundEvent).second;
                       if (existingAlias != args[1]) {
                         ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_INVALID_CONTENT, currentLine, String("Alias has been redefined \"") + args[0] + "\" in line: " + line);
                       }
@@ -1076,9 +1103,9 @@ namespace zsLib
                   }
 
                   {
-                    auto found = provider->mChannels.find(channel->mID);
-                    if (found != provider->mChannels.end()) {
-                      auto existingChannel = (*found).second;
+                    auto foundChannel = provider->mChannels.find(channel->mID);
+                    if (foundChannel != provider->mChannels.end()) {
+                      auto existingChannel = (*foundChannel).second;
                       if ((existingChannel->mID != channel->mID) ||
                         (existingChannel->mName != channel->mName) ||
                         (existingChannel->mType != channel->mType)) {
@@ -1103,8 +1130,8 @@ namespace zsLib
                   task->mName = provider->aliasLookup(args[0]);
 
                   {
-                    auto found = provider->mTasks.find(task->mName);
-                    if (found == provider->mTasks.end()) {
+                    auto foundTask = provider->mTasks.find(task->mName);
+                    if (foundTask == provider->mTasks.end()) {
                       provider->mTasks[task->mName] = task;
                     }
                   }
@@ -1117,13 +1144,13 @@ namespace zsLib
                     ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_INVALID_CONTENT, currentLine, "Invalid number of arguments in keyword \"" + string(args.size()) + "\" in line: " + line);
                   }
                   prepareProvider(mConfig);
-                  
+
                   auto keyword = IEventingTypes::Keyword::create();
                   keyword->mName = provider->aliasLookup(args[0]);
-                  
+
                   {
-                    auto found = provider->mKeywords.find(keyword->mName);
-                    if (found == provider->mKeywords.end()) {
+                    auto foundKeyword = provider->mKeywords.find(keyword->mName);
+                    if (foundKeyword == provider->mKeywords.end()) {
                       provider->mKeywords[keyword->mName] = keyword;
                     }
                   }
@@ -1141,8 +1168,8 @@ namespace zsLib
                   opCode->mName = provider->aliasLookup(args[0]);
 
                   {
-                    auto found = provider->mOpCodes.find(opCode->mName);
-                    if (found == provider->mOpCodes.end()) {
+                    auto foundOpCode = provider->mOpCodes.find(opCode->mName);
+                    if (foundOpCode == provider->mOpCodes.end()) {
                       provider->mOpCodes[opCode->mName] = opCode;
                     }
                   }
@@ -1162,18 +1189,18 @@ namespace zsLib
 
                   IEventingTypes::TaskPtr task;
                   {
-                    auto found = provider->mTasks.find(taskName);
-                    if (found == provider->mTasks.end()) {
+                    auto foundTask = provider->mTasks.find(taskName);
+                    if (foundTask == provider->mTasks.end()) {
                       ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_INVALID_CONTENT, currentLine, String("Task is missing \"") + taskName + "\" in line: " + line);
                     }
-                    task = (*found).second;
+                    task = (*foundTask).second;
                   }
 
                   opCode->mTask = task;
 
                   {
-                    auto found = task->mOpCodes.find(opCode->mName);
-                    if (found == task->mOpCodes.end()) {
+                    auto foundOpCode = task->mOpCodes.find(opCode->mName);
+                    if (foundOpCode == task->mOpCodes.end()) {
                       task->mOpCodes[opCode->mName] = opCode;
                     }
                   }
@@ -1219,11 +1246,11 @@ namespace zsLib
                   prepareProvider(mConfig);
                   String eventName = provider->aliasLookup(args[0]);
                   String eventValue = provider->aliasLookup(args[1]);
-                  auto found = provider->mEvents.find(eventName);
-                  if (found == provider->mEvents.end()) {
+                  auto foundEvent = provider->mEvents.find(eventName);
+                  if (foundEvent == provider->mEvents.end()) {
                     ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_INVALID_CONTENT, currentLine, "Event name not found \"" + eventName + "\" in line: " + line);
                   }
-                  auto event = (*found).second;
+                  auto event = (*foundEvent).second;
                   try {
                     auto newValue = Numeric<decltype(event->mValue)>(eventValue);
                     if (0 != event->mValue) {
@@ -1245,20 +1272,20 @@ namespace zsLib
                   prepareProvider(mConfig);
                   String subsystemName = provider->aliasLookup(args[0]);
                   String subsystemLevel = provider->aliasLookup(args[1]);
-                  
+
                   auto subsystem = IEventingTypes::Subsystem::create();
                   subsystem->mName = subsystemName;
-                  
+
                   try {
                     subsystem->mLevel = zsLib::Log::toLevel(subsystemLevel);
                   } catch (const InvalidArgument &) {
                     ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_INVALID_CONTENT, currentLine, "Invalid level \"" + subsystemLevel + "\" in line: " + line);
                   }
 
-                  auto found = provider->mSubsystems.find(subsystemName);
-                  if (found != provider->mSubsystems.end()) {
+                  auto foundSubsystem = provider->mSubsystems.find(subsystemName);
+                  if (foundSubsystem != provider->mSubsystems.end()) {
                     auto hash1 = subsystem->hash();
-                    auto hash2 = (*found).second->hash();
+                    auto hash2 = (*foundSubsystem).second->hash();
                     if (hash1 != hash2) {
                       tool::output() << "[Warning] Subsystem default level has changed \"" << subsystem->mName << "\" and new level is \"" << zsLib::Log::toString(subsystem->mLevel) << "\"\n";
                     }
@@ -1269,7 +1296,22 @@ namespace zsLib
                   continue;
                 }
 
-                ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_METHOD_NOT_UNDERSTOOD, currentLine, "Method is not valid: " + method);
+                {
+                  for (int loopIgnored = 0; NULL != gIgnoredMethods[loopIgnored]; ++loopIgnored) {
+                    if (gIgnoredMethods[loopIgnored] == method) goto found_ignored;
+                  }
+                  goto not_found_ignored;
+                }
+
+              found_ignored:
+                {
+                  continue;
+                }
+
+              not_found_ignored:
+                {
+                  ZS_THROW_CUSTOM_PROPERTIES_2(FailureWithLine, ZS_EVENTING_TOOL_METHOD_NOT_UNDERSTOOD, currentLine, "Method is not valid: " + method);
+                }
               }
             } catch (const InvalidContent &e) {
               ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_INVALID_CONTENT, "Invalid content found: " + e.message());
@@ -1280,7 +1322,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void EventingCompiler::prepareIndex() throw (Failure)
+        void EventingCompiler::prepareIndex() noexcept(false)
         {
           if (!mConfig.mProvider) return;
 
@@ -1322,7 +1364,7 @@ namespace zsLib
             {
               auto task = (*iter).second;
               if (0 != task->mValue) continue;
-              
+
               while (!insert(consumedIndexes, current, false)) { ++current; }
               task->mValue = current;
             }
@@ -1413,10 +1455,10 @@ namespace zsLib
           } catch (const InvalidArgument &e) {
             ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_INVALID_CONTENT, "Task OpCode index is not valid: " + e.message());
           }
-          
+
           try {
             Index64Set consumedIndexes;
-            
+
             for (auto iter = provider->mKeywords.begin(); iter != provider->mKeywords.end(); ++iter)
             {
               auto keyword = (*iter).second;
@@ -1429,7 +1471,7 @@ namespace zsLib
             {
               auto keyword = (*iter).second;
               if (0 != keyword->mMask) continue;
-              
+
               bool foundKeywordBitmask {};
 
               do {
@@ -1446,7 +1488,7 @@ namespace zsLib
                 for (auto iterSet = consumedIndexes.begin(); iterSet != consumedIndexes.end(); ++iterSet) {
                   auto &mask = (*iterSet);
                   if (mask == current) continue;  // skip if it was the same one added
-                  
+
                   if (0 != (mask & current)) {
                     foundKeywordBitmask = true;
                     break;
@@ -1485,7 +1527,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void EventingCompiler::validate() throw (Failure)
+        void EventingCompiler::validate() noexcept(false)
         {
           ProviderPtr &provider = mConfig.mProvider;
           if (!provider) return;
@@ -1496,7 +1538,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        DocumentPtr EventingCompiler::generateManifest(const String &resourcePostFix) const throw (Failure)
+        DocumentPtr EventingCompiler::generateManifest(const String &resourcePostFix) const noexcept(false)
         {
           const ProviderPtr &provider = mConfig.mProvider;
 
@@ -1665,7 +1707,7 @@ namespace zsLib
             providerEl->adoptAsLastChild(tasksEl);
             addEOL(providerEl);
           }
-          
+
           //<keywords>
           //  <keyword name="Read" mask="0x1" symbol="KEYWORD_READ" message="$(string.Keyword.Read)" />
           //</keywords>
@@ -1734,7 +1776,7 @@ namespace zsLib
             providerEl->adoptAsLastChild(opCodesEl);
             addEOL(providerEl);
           }
-          
+
           if (provider->mDataTemplates.size() > 0) {
             addEOL(dataTemplatesEl);
             for (auto iter = provider->mDataTemplates.begin(); iter != provider->mDataTemplates.end(); ++iter)
@@ -1746,6 +1788,10 @@ namespace zsLib
               dataTemplateEl->setAttribute("tid", "T_" + hash);
               addEOL(dataTemplateEl);
 
+              dataTemplateEl->adoptAsLastChild(createDataEl("UInt64", "_timestamp"));
+              addEOL(dataTemplateEl);
+              dataTemplateEl->adoptAsLastChild(createDataEl("UInt64", "_thread"));
+              addEOL(dataTemplateEl);
               dataTemplateEl->adoptAsLastChild(createDataEl("AnsiString", "_subsystem"));
               addEOL(dataTemplateEl);
               dataTemplateEl->adoptAsLastChild(createDataEl("AnsiString", "_function"));
@@ -1758,7 +1804,9 @@ namespace zsLib
               {
                 auto dataType = (*iterDataTemplate);
 
-                if (("_function" == dataType->mValueName) ||
+                if (("_timestamp" == dataType->mValueName) ||
+                    ("_thread" == dataType->mValueName) ||
+                    ("_function" == dataType->mValueName) ||
                     ("_line" == dataType->mValueName) ||
                     ("_subsystem" == dataType->mValueName)) {
                   ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_INVALID_CONTENT, "Function parameter cannot be named: " + dataType->mValueName);
@@ -1801,18 +1849,18 @@ namespace zsLib
                     case IEventingTypes::PredefinedTypedef_short:
                     case IEventingTypes::PredefinedTypedef_sshort:      dataTemplateEl->adoptAsLastChild(createDataEl("Int16", dataType->mValueName)); addEOL(dataTemplateEl); break;
                     case IEventingTypes::PredefinedTypedef_int:
-                    case IEventingTypes::PredefinedTypedef_sint:        
+                    case IEventingTypes::PredefinedTypedef_sint:
                     case IEventingTypes::PredefinedTypedef_int64:
                     case IEventingTypes::PredefinedTypedef_sint64:
                     case IEventingTypes::PredefinedTypedef_long:
                     case IEventingTypes::PredefinedTypedef_longlong:
-                    case IEventingTypes::PredefinedTypedef_slonglong:   
+                    case IEventingTypes::PredefinedTypedef_slonglong:
                     case IEventingTypes::PredefinedTypedef_slong:       dataTemplateEl->adoptAsLastChild(createDataEl("Int64", dataType->mValueName)); addEOL(dataTemplateEl); break;
                     case IEventingTypes::PredefinedTypedef_size:
                     case IEventingTypes::PredefinedTypedef_uint:
                     case IEventingTypes::PredefinedTypedef_qword:
                     case IEventingTypes::PredefinedTypedef_uint64:
-                    case IEventingTypes::PredefinedTypedef_ulong:       
+                    case IEventingTypes::PredefinedTypedef_ulong:
                     case IEventingTypes::PredefinedTypedef_ulonglong:   dataTemplateEl->adoptAsLastChild(createDataEl("UInt64", dataType->mValueName)); addEOL(dataTemplateEl); break;
                     case IEventingTypes::PredefinedTypedef_dword:
                     case IEventingTypes::PredefinedTypedef_uint32:      dataTemplateEl->adoptAsLastChild(createDataEl("UInt32", dataType->mValueName)); addEOL(dataTemplateEl); break;
@@ -1831,7 +1879,7 @@ namespace zsLib
 
                     case IEventingTypes::PredefinedTypedef_binary:      goto next;
 
-                    case IEventingTypes::PredefinedTypedef_string:      
+                    case IEventingTypes::PredefinedTypedef_string:
                     case IEventingTypes::PredefinedTypedef_astring:     dataTemplateEl->adoptAsLastChild(createDataEl("AnsiString", dataType->mValueName)); addEOL(dataTemplateEl); break;
                     case IEventingTypes::PredefinedTypedef_wstring:     dataTemplateEl->adoptAsLastChild(createDataEl("UnicodeString", dataType->mValueName)); addEOL(dataTemplateEl); break;
                   }
@@ -1854,6 +1902,10 @@ namespace zsLib
           {
             ElementPtr dataTemplateEl = Element::create("template");
             dataTemplateEl->setAttribute("tid", "T_Basic");
+            addEOL(dataTemplateEl);
+            dataTemplateEl->adoptAsLastChild(createDataEl("UInt64", "_timestamp"));
+            addEOL(dataTemplateEl);
+            dataTemplateEl->adoptAsLastChild(createDataEl("UInt64", "_thread"));
             addEOL(dataTemplateEl);
             dataTemplateEl->adoptAsLastChild(createDataEl("AnsiString", "_subsystem"));
             addEOL(dataTemplateEl);
@@ -1965,7 +2017,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        DocumentPtr EventingCompiler::generateWprp() const throw (Failure)
+        DocumentPtr EventingCompiler::generateWprp() const noexcept(false)
         {
           const ProviderPtr &provider = mConfig.mProvider;
 
@@ -2005,7 +2057,7 @@ namespace zsLib
           {
             addEOL(profilesEl);
             //<EventCollector Id="EventCollector_zsLib_Verbose" Name="zsLib Event Collector" Private="false" ProcessPrivate="false" Secure="false" Realtime="false">
-            //  <BufferSize Value="1024"/>
+            //  <BufferSize Value="2048"/>
             //  <Buffers Value="40"/>
             //</EventCollector>
             {
@@ -2019,13 +2071,13 @@ namespace zsLib
               addEOL(eventCollectorEl);
               {
                 ElementPtr bufferSizeEl = Element::create("BufferSize");
-                bufferSizeEl->setAttribute("Value", "1024");
+                bufferSizeEl->setAttribute("Value", "2048");
                 eventCollectorEl->adoptAsLastChild(bufferSizeEl);
                 addEOL(eventCollectorEl);
               }
               {
                 ElementPtr bufferEl = Element::create("Buffers");
-                bufferEl->setAttribute("Value", "1024");
+                bufferEl->setAttribute("Value", "2048");
                 eventCollectorEl->adoptAsLastChild(bufferEl);
                 addEOL(eventCollectorEl);
               }
@@ -2223,7 +2275,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        DocumentPtr EventingCompiler::generateJsonMan() const throw (Failure)
+        DocumentPtr EventingCompiler::generateJsonMan() const noexcept(false)
         {
           DocumentPtr doc = Document::create();
           ElementPtr providerEl = mConfig.mProvider->createElement();
@@ -2235,7 +2287,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        static const char *getFunctions()
+        static const char *getFunctions() noexcept
         {
           static const char *functions =
           "\n";
@@ -2245,10 +2297,12 @@ namespace zsLib
 
         //---------------------------------------------------------------------
         SecureByteBlockPtr EventingCompiler::generateXPlatformEventsHeader(
-                                                                           const String &outputNameXPlatform,
-                                                                           const String &outputNameWindows
-                                                                           ) const throw (Failure)
+                                                                           ZS_MAYBE_USED() const String &outputNameXPlatform,
+                                                                           ZS_MAYBE_USED() const String &outputNameWindows
+                                                                           ) const noexcept(false)
         {
+          ZS_MAYBE_USED(outputNameXPlatform);
+          ZS_MAYBE_USED(outputNameWindows);
           std::stringstream ss;
 
           const ProviderPtr &provider = mConfig.mProvider;
@@ -2263,7 +2317,7 @@ namespace zsLib
           ss << "  namespace eventing {\n";
 
           ss << getFunctions();
-          
+
           String getEventingHandleFunction = "getEventHandle_" + provider->mName + "()";
           String getEventingHandleFunctionWithNamespace = "::zsLib::eventing::" + getEventingHandleFunction;
 
@@ -2277,7 +2331,7 @@ namespace zsLib
 
           ss << "#define ZS_INTERNAL_REGISTER_EVENTING_" << provider->mName << "() \\\n";
           ss << "    { \\\n";
-          ss << "      ZS_EVENTING_REGISTER_EVENT_WRITER(" << getEventingHandleFunctionWithNamespace << ", \"" << string(provider->mID) << "\", \"" << provider->mName << "\", \"" << provider->mUniqueHash << "\"); \\\n";
+          ss << "      ZS_EVENTING_REGISTER_EVENT_WRITER(" << getEventingHandleFunctionWithNamespace << ", \"" << string(provider->mID) << "\", \"" << provider->mName << "\", \"" << provider->mUniqueHash << "\", g" << provider->mName << "_JMANAsString); \\\n";
           for (auto iter = provider->mSubsystems.begin(); iter != provider->mSubsystems.end(); ++iter) {
             auto subsystem = (*iter).second;
             ss << "      ZS_EVENTING_REGISTER_SUBSYSTEM_DEFAULT_LEVEL(" << subsystem->mName << ", " << zsLib::Log::toString(subsystem->mLevel) << "); \\\n";
@@ -2296,7 +2350,7 @@ namespace zsLib
 //              static const USE_EVENT_DESCRIPTOR description {0,0,0,0,0,0,0x8000000000000000};
 //              return &description;
 //            }
-            
+
 //            typedef struct _EVENT_DESCRIPTOR {
 //              USHORT    Id;
 //              UCHAR     Version;
@@ -2322,13 +2376,13 @@ namespace zsLib
             }
 
             keywordValue += "ULL)";
-            
+
             {
               ss << "\n";
               ss << "    inline const USE_EVENT_DESCRIPTOR *getEventDescriptor_" << event->mName << "()\n";
               ss << "    {\n";
               ss << "      static const USE_EVENT_DESCRIPTOR description {";
-              
+
               ss << string(event->mValue) << ", ";
               ss << "0, "; // version not supported
               if (event->mChannel) {
@@ -2337,25 +2391,25 @@ namespace zsLib
                 ss << "0, ";
               }
               ss <<  string(static_cast<std::underlying_type<IEventingTypes::PredefinedLevels>::type>(IEventingTypes::toPredefinedLevel(event->mSeverity, event->mLevel))) << ", ";
-              
+
               if (event->mOpCode) {
                 ss << string(event->mOpCode->mValue) << ", ";
               } else {
                 ss << "0, ";
               }
-              
+
               if (event->mTask) {
                 ss << string(event->mTask->mValue) << ", ";
               } else {
                 ss << "0, ";
               }
-              
+
               ss << keywordValue;
               ss << "};\n";
               ss << "      return &description;\n";
               ss << "    }\n";
             }
-            
+
 //            enum EventParameterTypes
 //            {
 //              EventParameterType_Boolean = 1,
@@ -2366,7 +2420,7 @@ namespace zsLib
 //              EventParameterType_Binary = 16 | 32,
 //              EventParameterType_String = 16 | 64,
 //            };
-            
+
 
             {
               ss << "\n";
@@ -2374,10 +2428,12 @@ namespace zsLib
               ss << "    {\n";
               ss << "      static const USE_EVENT_PARAMETER_DESCRIPTOR descriptions [] =\n";
               ss << "      {\n";
+              ss << "        {EventParameterType_UnsignedInteger},\n";
+              ss << "        {EventParameterType_UnsignedInteger},\n";
               ss << "        {EventParameterType_AString},\n";
               ss << "        {EventParameterType_AString},\n";
               ss << "        {EventParameterType_UnsignedInteger}";
-              
+
               if (event->mDataTemplate) {
                 bool nextMustBeSize = false;
                 for (auto iterDataType = event->mDataTemplate->mDataTypes.begin(); iterDataType != event->mDataTemplate->mDataTypes.end(); ++iterDataType) {
@@ -2421,7 +2477,7 @@ namespace zsLib
                   ss << "        {EventParameterType_" << typeStr << "}";
                 }
               }
-              
+
               ss << "\n";
               ss << "      };\n";
               ss << "      return &(descriptions[0]);\n";
@@ -2449,13 +2505,12 @@ namespace zsLib
             {
               String getCurrentSubsystemStr;
               if ("x" == event->mSubsystem) {
-                ss << "  if (ZS_EVENTING_IS_LOGGING(" << getEventingHandleFunctionWithNamespace << ", " << keywordValue << ", " << Log::toString(event->mLevel) << ")) { \\\n";
+                ss << "  if (ZS_EVENTING_CHECK_IF_LOGGING(" << getEventingHandleFunctionWithNamespace << ", " << keywordValue << ", " << Log::toString(event->mLevel) << ")) { \\\n";
                 getCurrentSubsystemStr = "(ZS_GET_SUBSYSTEM())";
               } else {
-                ss << "  if (ZS_EVENTING_IS_SUBSYSTEM_LOGGING(" << getEventingHandleFunctionWithNamespace << ", " << keywordValue << ", xSubsystem, " << Log::toString(event->mLevel) << ")) { \\\n";
+                ss << "  if (ZS_EVENTING_CHECK_IF_SUBSYSTEM_LOGGING(" << getEventingHandleFunctionWithNamespace << ", " << keywordValue << ", xSubsystem, " << Log::toString(event->mLevel) << ")) { \\\n";
                 getCurrentSubsystemStr = "(xSubsystem)";
               }
-              
 
               size_t totalDataTypes = 0;
               size_t totalPointerTypes = 0;
@@ -2475,19 +2530,23 @@ namespace zsLib
                   }
                 }
               }
-              
+
               size_t totalTypes = totalDataTypes + totalPointerTypes + totalStringTypes;
-              
-#define ZS_EVENTING_TOTAL_BUILT_IN_DATA_EVENT_TYPES (3)
-              
+
+#define ZS_EVENTING_TOTAL_BUILT_IN_DATA_EVENT_TYPES (5)
+
               ss << "    ::zsLib::eventing::USE_EVENT_DATA_DESCRIPTOR xxDescriptors[" << string(ZS_EVENTING_TOTAL_BUILT_IN_DATA_EVENT_TYPES+totalTypes) << "]; \\\n";
+              ss << "    uint64_t xxTimestamp = ZS_GET_CURRENT_TIMESTAMP_MS(); \\\n";
+              ss << "    uint64_t xxThreadID = ZS_GET_CURRENT_THREAD_ID(); \\\n";
               ss << "    uint32_t xxLineNumber = __LINE__; \\\n";
               ss << "    \\\n";
-              ss << "    ZS_EVENTING_EVENT_DATA_DESCRIPTOR_FILL_ASTR(&(xxDescriptors[0]), " << getCurrentSubsystemStr << ".getName()); \\\n";
-              ss << "    ZS_EVENTING_EVENT_DATA_DESCRIPTOR_FILL_ASTR(&(xxDescriptors[1]), __func__); \\\n";
-              ss << "    ZS_EVENTING_EVENT_DATA_DESCRIPTOR_FILL_VALUE(&(xxDescriptors[2]), &xxLineNumber, sizeof(xxLineNumber)); \\\n";
+              ss << "    ZS_EVENTING_EVENT_DATA_DESCRIPTOR_FILL_VALUE(&(xxDescriptors[0]), &xxTimestamp, sizeof(xxTimestamp)); \\\n";
+              ss << "    ZS_EVENTING_EVENT_DATA_DESCRIPTOR_FILL_VALUE(&(xxDescriptors[1]), &xxThreadID, sizeof(xxThreadID)); \\\n";
+              ss << "    ZS_EVENTING_EVENT_DATA_DESCRIPTOR_FILL_ASTR(&(xxDescriptors[2]), " << getCurrentSubsystemStr << ".getName()); \\\n";
+              ss << "    ZS_EVENTING_EVENT_DATA_DESCRIPTOR_FILL_ASTR(&(xxDescriptors[3]), __func__); \\\n";
+              ss << "    ZS_EVENTING_EVENT_DATA_DESCRIPTOR_FILL_VALUE(&(xxDescriptors[4]), &xxLineNumber, sizeof(xxLineNumber)); \\\n";
               ss << "    \\\n";
-              
+
               size_t current = ZS_EVENTING_TOTAL_BUILT_IN_DATA_EVENT_TYPES;
 
               bool nextMustBeSize = false;
@@ -2571,10 +2630,10 @@ namespace zsLib
 
                     case IEventingTypes::PredefinedTypedef_binary: {
                       isDataType = false;
-                      
+
                       String newValueStrPlus1 = "xxVal" + string(current+1);
                       String oldValueStrPlus1 = "(xValue" + string(loop+1) + ")";
-                      
+
                       ss << "    auto " << newValueStr << " = " << originalValueStr << "; \\\n";
                       ss << "    uint32_t " << newValueStrPlus1 << " {static_cast<uint32_t>" << oldValueStrPlus1 << "}; \\\n";
                       ss << "    ZS_EVENTING_EVENT_DATA_DESCRIPTOR_FILL_VALUE(&(xxDescriptors[" << current << "]), &(" << newValueStrPlus1 << "), sizeof(" << newValueStrPlus1 << ")); \\\n";
@@ -2637,11 +2696,13 @@ namespace zsLib
 
         //---------------------------------------------------------------------
         SecureByteBlockPtr EventingCompiler::generateWindowsEventsHeader(
-                                                                         const String &outputNameXPlatform,
-                                                                         const String &outputNameWindows,
+                                                                         ZS_MAYBE_USED() const String &outputNameXPlatform,
+                                                                         ZS_MAYBE_USED() const String &outputNameWindows,
                                                                          const String &outputNameWindowsETW
-                                                                         ) const throw (Failure)
+                                                                         ) const noexcept(false)
         {
+          ZS_MAYBE_USED(outputNameXPlatform);
+          ZS_MAYBE_USED(outputNameWindows);
           std::stringstream ss;
 
           const ProviderPtr &provider = mConfig.mProvider;
@@ -2661,16 +2722,12 @@ namespace zsLib
             "\n"
             "#else /* ZS_EVENTING_NOOP */\n"
             "\n"
-            "#ifndef ZS_EVENTING_IS_SUBSYSTEM_LOGGING\n"
-            "#define ZS_EVENTING_IS_SUBSYSTEM_LOGGING(xSubsystem, xLevel)\n"
-            "#endif /* ZS_EVENTING_IS_SUBSYSTEM_LOGGING */\n"
-            "\n"
-            "#ifndef ZS_EVENTING_IS_LOGGING\n"
-            "#define ZS_EVENTING_IS_LOGGING(xLevel)\n"
-            "#endif /* ZS_EVENTING_IS_LOGGING */\n"
+            "#ifndef ZS_EVENTING_GET_CURRENT_SUBSYSTEM_NAME\n"
+            "#define ZS_EVENTING_GET_CURRENT_SUBSYSTEM_NAME()                                                            ((ZS_GET_SUBSYSTEM()).getName())\n"
+            "#endif /* ZS_EVENTING_GET_CURRENT_SUBSYSTEM_NAME */\n"
             "\n"
             "#ifndef ZS_EVENTING_GET_SUBSYSTEM_NAME\n"
-            "#define ZS_EVENTING_GET_SUBSYSTEM_NAME ((const char *)NULL)\n"
+            "#define ZS_EVENTING_GET_SUBSYSTEM_NAME(xSubsystem)                                                          ((xSubsystem).getName())\n"
             "#endif /* ZS_EVENTING_GET_SUBSYSTEM_NAME */\n"
             "\n"
             "#ifndef ZS_EVENTING_EXCLUSIVE\n"
@@ -2691,8 +2748,15 @@ namespace zsLib
             "#ifndef _WIN32\n"
             "\n"
             "#ifndef ZS_EVENTING_REGISTER\n"
-            "#define ZS_EVENTING_REGISTER(xProviderName)\n"
-            "#define ZS_EVENTING_UNREGISTER(xProviderName)\n"
+            "#define ZS_EVENTING_REGISTER(xProviderName)                               ;\n"
+            "#define ZS_EVENTING_UNREGISTER(xProviderName)                             ;\n"
+            "\n"
+            "#define ZS_EVENTING_IS_LOGGING(xLevel)                                    (::zsLib::internal::Log::returnFalse())\n"
+            "#define ZS_EVENTING_IS_LOGGING_VALUE(xLevelValue)                         (::zsLib::internal::Log::returnFalse())\n"
+            "#define ZS_EVENTING_IS_SUBSYSTEM_LOGGING(xSubsystem, xLevel)              (::zsLib::internal::Log::returnFalse())\n"
+            "\n"
+            "#define ZS_EVENTING_GET_CURRENT_SUBSYSTEM_NAME()                          ((ZS_GET_SUBSYSTEM()).getName())\n"
+            "#define ZS_EVENTING_GET_SUBSYSTEM_NAME(xSubsystem)                        ((xSubsystem).getName())\n"
             "\n";
 
           for (int index = 0; index <= 38; ++index)
@@ -2702,7 +2766,7 @@ namespace zsLib
             {
               ss << ", xType" << string(paramIndex) << ", xName" << string(paramIndex) << ", xValue" << string(paramIndex);
             }
-            ss << ")\n";
+            ss << ") ;\n";
           }
 
           ss << "\n";
@@ -2714,7 +2778,7 @@ namespace zsLib
             {
               ss << ", xType" << string(paramIndex) << "AndName" << string(paramIndex) << ", xValue" << string(paramIndex);
             }
-            ss << ")\n";
+            ss << ") ;\n";
           }
 
           ss <<
@@ -2731,6 +2795,18 @@ namespace zsLib
             "#ifndef ZS_EVENTING_REGISTER\n"
             "#define ZS_EVENTING_REGISTER(xProviderName)                                     ZS_INTERNAL_REGISTER_EVENTING_##xProviderName()\n"
             "#define ZS_EVENTING_UNREGISTER(xProviderName)                                   ZS_INTERNAL_UNREGISTER_EVENTING_##xProviderName()\n"
+            "\n"
+            "#ifndef ZS_EVENTING_IS_SUBSYSTEM_LOGGING\n"
+            "#define ZS_EVENTING_IS_SUBSYSTEM_LOGGING(xSubsystem, xLevel)                    (((xSubsystem).getEventingLevel()) >= ::zsLib::Log::xLevel)\n"
+            "#endif /* ZS_EVENTING_IS_SUBSYSTEM_LOGGING */\n"
+            "\n"
+            "#ifndef ZS_EVENTING_IS_LOGGING\n"
+            "#define ZS_EVENTING_IS_LOGGING(xLevel)                                          (((ZS_GET_SUBSYSTEM()).getEventingLevel()) >= ::zsLib::Log::xLevel)\n"
+            "#endif /* ZS_EVENTING_IS_LOGGING */\n"
+            "\n"
+            "#ifndef ZS_EVENTING_IS_LOGGING_VALUE\n"
+            "#define ZS_EVENTING_IS_LOGGING_VALUE(xLevelValue)                               (((ZS_GET_SUBSYSTEM()).getEventingLevel()) >= (xLevelValue))\n"
+            "#endif /* ZS_EVENTING_IS_LOGGING_VALUE */\n"
             "\n";
 
           for (int index = 0; index <= 38; ++index)
@@ -2768,14 +2844,6 @@ namespace zsLib
           }
 
           ss << "#endif /* ZS_EVENTING_REGISTER */\n\n";
-
-          ss <<
-            "#ifndef ZS_EVENTING_IS_LOGGING\n"
-            "#define ZS_EVENTING_IS_LOGGING(xLevel)\n"
-            "#define ZS_EVENTING_IS_SUBSYSTEM_LOGGING(xSubsystem, xLevel)\n"
-            "#define ZS_EVENTING_GET_CURRENT_SUBSYSTEM_NAME() ((const char *)NULL)\n"
-            "#define ZS_EVENTING_GET_SUBSYSTEM_NAME(xSubsystem) #xSubsystem\n"
-            "#endif /*ZS_EVENTING_IS_LOGGING */\n\n";
 
           ss << "#define ZS_INTERNAL_REGISTER_EVENTING_" << provider->mName << "() EventRegister" << provider->mName << "()\n";
           ss << "#define ZS_INTERNAL_UNREGISTER_EVENTING_" << provider->mName << "() EventUnregister" << provider->mName << "()\n\n";
@@ -2953,7 +3021,7 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void EventingCompiler::writeXML(const String &outputName, const DocumentPtr &doc) const throw (Failure)
+        void EventingCompiler::writeXML(const String &outputName, const DocumentPtr &doc) const noexcept(false)
         {
           if (!doc) return;
           try {
@@ -2965,19 +3033,189 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        void EventingCompiler::writeJSON(const String &outputName, const DocumentPtr &doc) const throw (Failure)
+        SecureByteBlockPtr EventingCompiler::makeIntoCArray(
+                                                            std::stringstream &ssPrefix,
+                                                            std::stringstream &ssPostFix,
+                                                            const SecureByteBlock &buffer
+                                                            ) noexcept
+        {
+          static_assert(sizeof(char) == sizeof(BYTE), "size of char assumed to be size of byte");
+
+          if (buffer.SizeInBytes() < 1) return SecureByteBlockPtr();
+
+          String prefixStr = ssPrefix.str();
+          String postfixStr = ssPostFix.str();
+
+          size_t count = prefixStr.length() + postfixStr.length();
+
+          bool lastWasEOL = true;
+
+          // scope: count number of characters needed to hold escaped buffer
+          {
+            const char *p = reinterpret_cast<const char *>(buffer.BytePtr());
+
+            while ('\0' != *p) {
+
+              switch (*p) {
+                case ' ':  {
+                  if (lastWasEOL) goto skip_next;
+                  goto count_next;
+                }
+                case '\t': {
+                  if (lastWasEOL) goto skip_next;
+                  ++count;
+                  goto count_next;
+                }
+                case '\n': {
+                  ++count; // add end of line
+                  lastWasEOL = true;
+                  goto count_next;
+                }
+                default: {
+                  lastWasEOL = false;
+                  goto count_next;
+                }
+              }
+
+            count_next:
+              {
+                ++count; // for first digit
+
+                if (*p < 0) {
+                  ++count; // for negative sign
+                  if (*p < -9) {
+                    ++count;  // for second digit
+                    if (*p < -99) {                      
+                      ++count;  // for third digit
+                    }
+                  }
+                }
+                if (*p > 9) {
+                  ++count; // for second digit
+                  if (*p > 99) {
+                    ++count; // for third digit
+                  }
+                }
+
+                ++count; // for comma
+                ++count; // for space
+                ++p;
+                continue;
+              }
+
+            skip_next:
+              {
+                ++p;
+                continue;
+              }
+            }
+          }
+
+          SecureByteBlockPtr result(make_shared<SecureByteBlock>(count));
+
+          {
+            const char *p = reinterpret_cast<const char *>(buffer.BytePtr());
+            char *dest = reinterpret_cast<char *>(result->BytePtr());
+
+            memcpy(dest, prefixStr.c_str(), prefixStr.length());
+            dest += prefixStr.length();
+
+            lastWasEOL = true;
+            bool addEOL = false;
+
+            while ('\0' != *p) {
+              switch (*p) {
+                case ' ': {
+                  if (lastWasEOL) goto do_skip_next;
+                  goto put_next;
+                }
+                case '\t':  {
+                  if (lastWasEOL) goto do_skip_next;
+                  goto put_next;
+                }
+                case '\n': {
+                  addEOL = true;
+                  lastWasEOL = true;
+                  goto put_next;
+                }
+                default: lastWasEOL = false; goto put_next;
+              }
+              continue;
+
+            put_next:
+              {
+                int value = *p;
+                String strValue = string(value);
+                const char *tmp = strValue.c_str();
+                while ('\0' != *tmp) {
+                  *dest = *tmp;
+                  ++dest;
+                  ++tmp;
+                }
+
+                *dest = ',';
+                ++dest;
+
+                *dest = ' ';
+                ++dest;
+
+                ++p;
+                if (addEOL) {
+                  *dest = '\n';
+                  ++dest;
+                  addEOL = false;
+                }
+                continue;
+              }
+
+            do_skip_next:
+              {
+                ++p;
+                continue;
+              }
+            }
+
+            memcpy(dest, postfixStr.c_str(), postfixStr.length());
+            dest += postfixStr.length();
+          }
+
+          return result;
+        }
+
+        //---------------------------------------------------------------------
+        void EventingCompiler::writeJSON(
+                                         const String &outputName,
+                                         const String &outputAsCName,
+                                         const DocumentPtr &doc
+                                         ) const noexcept(false)
         {
           if (!doc) return;
+
+          const ProviderPtr &provider = mConfig.mProvider;
+
           try {
             auto output = UseEventingHelper::writeJSON(*doc);
+
+            std::stringstream ssPrefix;
+            std::stringstream ssPostFix;
+
+            ssPrefix << "/* " ZS_EVENTING_GENERATED_BY " */\n\n";
+            ssPrefix << "static const char g" << provider->mName << "_JMANAsString [] = {";
+
+            ssPostFix << "0};\n";
+
             UseEventingHelper::saveFile(outputName, *output);
+            auto cString = makeIntoCArray(ssPrefix, ssPostFix, *output);
+            if (cString) {
+              UseEventingHelper::saveFile(outputAsCName, *cString);
+            }
           } catch (const StdError &e) {
             ZS_THROW_CUSTOM_PROPERTIES_1(Failure, ZS_EVENTING_TOOL_SYSTEM_ERROR, "Failed to save JSON file \"" + outputName + "\": " + " error=" + string(e.result()) + ", reason=" + e.message());
           }
         }
 
         //---------------------------------------------------------------------
-        void EventingCompiler::writeBinary(const String &outputName, const SecureByteBlockPtr &buffer) const throw (Failure)
+        void EventingCompiler::writeBinary(const String &outputName, const SecureByteBlockPtr &buffer) const noexcept(false)
         {
           if ((!buffer) ||
               (0 == buffer->SizeInBytes())) {
@@ -2997,30 +3235,31 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark ICompilerTypes
-      #pragma mark
+      //
+      // ICompilerTypes
+      //
 
       //-----------------------------------------------------------------------
-      ICompilerTypes::Modes ICompilerTypes::toMode(const char *value) throw (InvalidArgument)
+      ICompilerTypes::Modes ICompilerTypes::toMode(const char *value) noexcept(false)
       {
         String str(value);
         for (ICompilerTypes::Modes index = ICompilerTypes::Mode_First; index <= ICompilerTypes::Mode_Last; index = static_cast<ICompilerTypes::Modes>(static_cast<std::underlying_type<ICompilerTypes::Modes>::type>(index) + 1)) {
           if (0 == str.compareNoCase(ICompilerTypes::toString(index))) return index;
         }
-        
+
         ZS_THROW_INVALID_ARGUMENT(String("mode is not understood:") + value);
         return ICompilerTypes::Mode_First;
       }
 
       //-----------------------------------------------------------------------
-      const char *ICompilerTypes::toString(Modes value)
+      const char *ICompilerTypes::toString(Modes value) noexcept
       {
         switch (value)
         {
           case Mode_Eventing:         return "eventing";
           case Mode_IDL:              return "idl";
         }
+        ZS_ASSERT_FAIL("unknown compiler type mode");
         return "unknown";
       }
 
@@ -3028,18 +3267,58 @@ namespace zsLib
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
       //-----------------------------------------------------------------------
-      #pragma mark
-      #pragma mark ICompiler
-      #pragma mark
+      //
+      // ICompilerTypes::Config
+      //
 
       //-----------------------------------------------------------------------
-      void ICompiler::installTarget(IIDLCompilerTargetPtr target)
+      ICompilerTypes::Config::Config() noexcept
+      {
+      }
+
+      //-----------------------------------------------------------------------
+      ICompilerTypes::Config::Config(const Config &source) noexcept
+      {
+        (*this) = source;
+      }
+
+      //-----------------------------------------------------------------------
+      ICompilerTypes::Config::~Config() noexcept
+      {
+      }
+
+      //-----------------------------------------------------------------------
+      ICompilerTypes::Config &ICompilerTypes::Config::operator=(const Config &source) noexcept
+      {
+        mMode = source.mMode;
+        mIDLOutputs = source.mIDLOutputs;
+        mConfigFile = source.mConfigFile;
+        mSourceFiles = source.mSourceFiles;
+        mOutputName = source.mOutputName;
+        mAuthor = source.mAuthor;
+        mProvider = source.mProvider;
+        mProject = source.mProject;
+
+        return *this;
+      }
+
+
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //-----------------------------------------------------------------------
+      //
+      // ICompiler
+      //
+
+      //-----------------------------------------------------------------------
+      void ICompiler::installTarget(IIDLCompilerTargetPtr target) noexcept
       {
         tool::internal::installIDLTarget(target);
       }
 
       //-----------------------------------------------------------------------
-      ICompilerPtr ICompiler::create(const Config &config)
+      ICompilerPtr ICompiler::create(const Config &config) noexcept
       {
         switch (config.mMode) {
           case ICompilerTypes::Mode_Eventing:   break;

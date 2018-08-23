@@ -51,7 +51,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #define ZS_WRAPPER_COMPILER_DIRECTIVE_EXCLUSIZE "EXCLUSIVE"
 
-namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zsLib_eventing_tool) } } }
+namespace zsLib { namespace eventing { namespace tool { ZS_DECLARE_SUBSYSTEM(zslib_eventing_tool) } } }
 
 namespace zsLib
 {
@@ -72,23 +72,23 @@ namespace zsLib
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateStructImplHeader
-        #pragma mark
+        //
+        // GenerateStructImplHeader
+        //
 
         //-------------------------------------------------------------------
-        GenerateStructImplHeader::GenerateStructImplHeader() : IDLCompiler(Noop{})
+        GenerateStructImplHeader::GenerateStructImplHeader() noexcept : IDLCompiler(Noop{})
         {
         }
 
         //-------------------------------------------------------------------
-        GenerateStructImplHeaderPtr GenerateStructImplHeader::create()
+        GenerateStructImplHeaderPtr GenerateStructImplHeader::create() noexcept
         {
           return make_shared<GenerateStructImplHeader>();
         }
 
         //---------------------------------------------------------------------
-        SecureByteBlockPtr GenerateStructImplHeader::generateTypesHeader(ProjectPtr project) throw (Failure)
+        SecureByteBlockPtr GenerateStructImplHeader::generateTypesHeader(ProjectPtr project) noexcept(false)
         {
           std::stringstream ss;
 
@@ -110,25 +110,25 @@ namespace zsLib
         }
 
         //-------------------------------------------------------------------
-        String GenerateStructImplHeader::getStructFileName(StructPtr structObj)
+        String GenerateStructImplHeader::getStructFileName(StructPtr structObj) noexcept
         {
           return String("impl_") + GenerateStructHeader::getStructFileName(structObj);
         }
 
         //-------------------------------------------------------------------
-        String GenerateStructImplHeader::getStructInitName(StructPtr structObj)
+        String GenerateStructImplHeader::getStructInitName(StructPtr structObj) noexcept
         {
           return GenerateStructHeader::getStructInitName(structObj);
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructImplHeader::makeOptional(bool isOptional, const String &value)
+        String GenerateStructImplHeader::makeOptional(bool isOptional, const String &value) noexcept
         {
           return GenerateStructHeader::makeOptional(isOptional, value);
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructImplHeader::getWrapperTypeString(bool isOptional, TypePtr type)
+        String GenerateStructImplHeader::getWrapperTypeString(bool isOptional, TypePtr type) noexcept
         {
           return GenerateStructHeader::getWrapperTypeString(isOptional, type);
         }
@@ -141,7 +141,7 @@ namespace zsLib
                                                      std::stringstream &ss,
                                                      bool needsDefaultConstructor,
                                                      bool &foundEventHandler
-                                                     )
+                                                     ) noexcept
         {
           if (!structObj) return;
 
@@ -154,7 +154,6 @@ namespace zsLib
             }
           }
 
-          bool foundCtor = false;
           bool firstMethod = true;
           for (auto iterMethods = structObj->mMethods.begin(); iterMethods != structObj->mMethods.end(); ++iterMethods)
           {
@@ -163,8 +162,9 @@ namespace zsLib
             if (methodObj->hasModifier(Modifier_Method_Delete)) continue;
             if (methodObj->hasModifier(Modifier_Static)) continue;
 
-            bool isCtor = methodObj->hasModifier(Modifier_Method_Ctor);
-            
+            bool isCtor {methodObj->hasModifier(Modifier_Method_Ctor)};
+            bool throws {methodObj->mThrows.size() > 0};
+
             if (derivedStructObj != structObj) {
               if (isCtor) continue;
             }
@@ -182,12 +182,10 @@ namespace zsLib
 
             ss << indentStr;
             if (!isCtor) {
-              ss << "virtual ";
               ss << getWrapperTypeString(methodObj->hasModifier(Modifier_Optional), methodObj->mResult);
               ss << " " << methodObj->mName;
             } else {
-              foundCtor = true;
-              ss << "virtual void wrapper_init_" << getStructInitName(structObj);
+              ss << "void wrapper_init_" << getStructInitName(structObj);
             }
 
             ss << "(";
@@ -208,11 +206,22 @@ namespace zsLib
               ss << typeStr << " " << argument->mName;
             }
             if (methodObj->mArguments.size() > 1) ss << "\n" << indentStr << "  ";
-            ss << ") override;\n";
+            ss << ") noexcept" << (throws ? "(false)" : "") << " override;";
+            if (throws) {
+              ss << " // throws ";
+              bool firstThrow {true};
+              for (auto iterThrows = methodObj->mThrows.begin(); iterThrows != methodObj->mThrows.end(); ++iterThrows) {
+                auto throwType = (*iterThrows);
+                if (!firstThrow) ss << ", ";
+                ss << getWrapperTypeString(false, throwType);
+              }
+            }
+
+            ss << "\n";
           }
 
           if ((derivedStructObj == structObj) && (needsDefaultConstructor)) {
-            ss << indentStr << "virtual void wrapper_init_" << getStructInitName(structObj) << "() override;\n";
+            ss << indentStr << "void wrapper_init_" << getStructInitName(structObj) << "() noexcept override;\n";
           }
 
           bool isDictionary = structObj->hasModifier(Modifier_Struct_Dictionary);
@@ -243,10 +252,10 @@ namespace zsLib
             firstProperty = false;
 
             if (hasGetter) {
-              ss << indentStr << "virtual " << typeStr << " get_" << propertyObj->mName << "() override;\n";
+              ss << indentStr << typeStr << " get_" << propertyObj->mName << "() noexcept override;\n";
             }
             if (hasSetter) {
-              ss << indentStr << "virtual void set_" << propertyObj->mName << "(" << typeStr << " value) override;\n";
+              ss << indentStr << "void set_" << propertyObj->mName << "(" << typeStr << " value) noexcept override;\n";
             }
           }
         }
@@ -257,7 +266,7 @@ namespace zsLib
                                                                 String indentStr,
                                                                 StringSet &includedHeaders,
                                                                 std::stringstream &ss
-                                                                )
+                                                                ) noexcept
         {
           if (!structObj) return;
           if (GenerateHelper::isBuiltInType(structObj)) return;
@@ -269,12 +278,22 @@ namespace zsLib
 
           String currentIdentStr = indentStr;
           indentStr += "  ";
+          ss << indentStr << "ZS_DECLARE_TYPEDEF_PTR(wrapper" << structObj->getPathName() << ", WrapperType);\n";
+          ss << indentStr << "ZS_DECLARE_TYPEDEF_PTR(wrapper::impl" << structObj->getPathName() << ", WrapperImplType);\n";
 
-          if (!structObj->hasModifier(Modifier_Static)) {
+          if (GenerateHelper::isConstructable(structObj)) {
             ss << indentStr << structObj->mName << "WeakPtr thisWeak_;\n\n";
-            ss << indentStr << structObj->mName << "();\n";
+            ss << indentStr << structObj->mName << "() noexcept;\n";
+          } else {
+            ss << indentStr << structObj->mName << "() noexcept = delete;\n";
+            ss << indentStr << structObj->mName << "(const " << structObj->mName<< " &) noexcept = delete;\n";
           }
-          ss << indentStr << "virtual ~" << structObj->mName << "();\n";
+          ss << indentStr << "virtual ~" << structObj->mName << "() noexcept;\n";
+          if (structObj->hasModifier(Modifier_Struct_Disposable)) {
+            ss << indentStr << "void wrapper_dispose() noexcept override;\n\n";
+          } else {
+            ss << "\n";
+          }
 
           for (auto iterStructs = structObj->mStructs.begin(); iterStructs != structObj->mStructs.end(); ++iterStructs)
           {
@@ -287,7 +306,7 @@ namespace zsLib
 
           if (foundEventHandler) {
             ss << "\n";
-            ss << indentStr << "virtual void wrapper_onObserverCountChanged(size_t count) override;\n";
+            ss << indentStr << "void wrapper_onObserverCountChanged(size_t count) noexcept override;\n";
           }
 
           indentStr = currentIdentStr;
@@ -298,18 +317,18 @@ namespace zsLib
         //-------------------------------------------------------------------
         //-------------------------------------------------------------------
         //-------------------------------------------------------------------
-        #pragma mark
-        #pragma mark GenerateStructImplHeader::IIDLCompilerTarget
-        #pragma mark
+        //
+        // GenerateStructImplHeader::IIDLCompilerTarget
+        //
 
         //-------------------------------------------------------------------
-        String GenerateStructImplHeader::targetKeyword()
+        String GenerateStructImplHeader::targetKeyword() noexcept
         {
           return String("implheader");
         }
 
         //-------------------------------------------------------------------
-        String GenerateStructImplHeader::targetKeywordHelp()
+        String GenerateStructImplHeader::targetKeywordHelp() noexcept
         {
           return String("C++ implementation wrapper header template");
         }
@@ -318,10 +337,10 @@ namespace zsLib
         void GenerateStructImplHeader::targetOutput(
                                                     const String &pathStr,
                                                     const ICompilerTypes::Config &config
-                                                    ) throw (Failure)
+                                                    ) noexcept(false)
         {
           typedef std::stack<NamespacePtr> NamespaceStack;
-          typedef std::stack<String> StringList;
+          typedef std::stack<String> StringStack;
 
           const ProjectPtr &project = config.mProject;
           if (!project) return;
@@ -359,7 +378,7 @@ namespace zsLib
               std::stringstream ss;
               std::stringstream includeSS;
               std::stringstream structSS;
-              StringList endStrings;
+              StringStack endStrings;
 
               ss << "// " ZS_EVENTING_GENERATED_BY "\n\n";
               ss << "#pragma once\n\n";
