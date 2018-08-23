@@ -15,7 +15,7 @@ config("zslib_eventing_config") {
       {
         cflags_cc += ["/EHsc"]
         defines = [
-          "CRYPTOPP_IGNORE_CALNG_LIMITATION",
+          "CRYPTOPP_IGNORE_CLANG_LIMITATION",
         ]
       }
     } else {
