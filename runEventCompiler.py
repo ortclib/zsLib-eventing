@@ -9,8 +9,23 @@ eventJsonPath=inputArray[1]
 toolchainCPU=inputArray[2]
 #tempToolchain=toolchain.split(":")
 #toolchainCPU=tempToolchain[1]
+hostCPU=inputArray[3]
 
-
+def getCompilerPath():
+  compilerNewPath = os.getcwd() + "/" + compilerPath;
+  if os.path.isfile(compilerNewPath):
+    return compilerNewPath
+  
+  compilerNewPath = os.getcwd() + "/" + toolchainCPU + "/" + compilerPath;
+  if os.path.isfile(compilerNewPath):
+    return compilerNewPath
+  
+  compilerNewPath = os.getcwd() + "/" + hostCPU + "/" + compilerPath;
+  if os.path.isfile(compilerNewPath):
+    return compilerNewPath
+    
+  return
+    
 #eventProviderPath=inputArray[2]
 if (os.name == "posix"):
   compilerPath="zslib-eventing-tool-compiler"
@@ -29,11 +44,15 @@ if not os.path.isfile(eventCompilationPath):
   #print("file: ",__file__)
   #print("getcwd", os.getcwd())
 
-  compilerNewPath = os.getcwd() + "/" + compilerPath;
-  if not os.path.isfile(compilerNewPath):
-    compilerNewPath = os.getcwd() + "/" + toolchainCPU + "/" + compilerPath;
-    if not os.path.isfile(compilerNewPath):
-      sys.exit("Idl compiler doesn't exist")
+  compilerFullPath = getCompilerPath()
+  if (compilerFullPath==None):
+    sys.exit("Idl compiler doesn't exist")
+  
+  #compilerNewPath = os.getcwd() + "/" + compilerPath;
+  #if not os.path.isfile(compilerNewPath):
+  #  compilerNewPath = os.getcwd() + "/" + toolchainCPU + "/" + compilerPath;
+  #  if not os.path.isfile(compilerNewPath):
+  #    sys.exit("Idl compiler doesn't exist")
       
   os.chdir(os.path.dirname(eventJsonPath))
   eventJsonNewPath = os.getcwd() + "/" + os.path.basename(eventJsonPath)
@@ -42,7 +61,7 @@ if not os.path.isfile(eventCompilationPath):
   #print("NOVO getcwd", os.getcwd())
   #print("out", os.path.dirname(eventJsonNewPath))
   #os.system(os.getcwd() + "/" + compilerPath + " -c " + eventJsonPath + " -o " + os.path.dirname(eventJsonPath))
-  result=os.system(compilerNewPath + " -c " + eventJsonNewPath + " -o " + os.path.dirname(eventJsonNewPath) + "/../internal/" + eventProviderName)
+  result=os.system(compilerFullPath + " -c " + eventJsonNewPath + " -o " + os.path.dirname(eventJsonNewPath) + "/../internal/" + eventProviderName)
 
   if (result==0):
     open(eventCompilationPath,'w').close()

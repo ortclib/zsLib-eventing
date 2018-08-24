@@ -19,6 +19,7 @@ template("compile_event_macro") {
       args = [
         "{{source}}",
         "$current_cpu",
+        "$host_cpu",
       ]
 
       deps = [ "//third_party/idl/zsLib-eventing:zslib-eventing-tool-compiler($host_toolchain)" ]
@@ -41,6 +42,7 @@ template("compile_single_event_macro") {
       args = [
         rebase_path(sources[0], root_build_dir),
         "$current_cpu",
+        "$host_cpu",
       ]
 
       deps = [ "//third_party/idl/zsLib-eventing:zslib-eventing-tool-compiler($host_toolchain)" ]
@@ -81,6 +83,7 @@ template("compile_idl_macro") {
         "$current_cpu",
         "$idlOutputPath",
         "$idlLanguages",
+        "$host_cpu",
       ]
 
       deps = [ "//third_party/idl/zsLib-eventing:zslib-eventing-tool-compiler($host_toolchain)" ]
