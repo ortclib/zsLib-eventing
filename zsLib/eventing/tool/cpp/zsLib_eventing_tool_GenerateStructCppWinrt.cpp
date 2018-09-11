@@ -2253,12 +2253,12 @@ namespace zsLib
           ss << indentStr << "static " << getCppWinrtType(helperFile, enumObj, GO::MakeReturnResult()) << " " << getToCppWinrtName(helperFile, enumObj, GO{}) << "(" << getCppType(enumObj, GO{}) << " value) { return (" << getCppWinrtType(helperFile, enumObj, GO{}) << ")value; }\n";
           ss << indentStr << "static " << getCppType(enumObj, GO{}) << " " << getFromCppWinrtName(enumObj) << "(" << getCppWinrtType(helperFile, enumObj, GO{}) << " value) { return (" << getCppType(enumObj, GO{}) << ")value; }\n";
 
-          ss << indentStr << "static " << getCppWinrtType(helperFile, enumObj, GO{ GO::MakeOptional(), GO::MakeReturnResult() }) << " " << getToCppWinrtName(helperFile, enumObj, GO{}) << "(" << getCppType(enumObj, GO::MakeOptional()) << "  &value);\n";
+          ss << indentStr << "static " << getCppWinrtType(helperFile, enumObj, GO{ GO::MakeOptional(), GO::MakeReturnResult() }) << " " << getToCppWinrtName(helperFile, enumObj, GO{}) << "(const " << getCppType(enumObj, GO::MakeOptional()) << "  &value);\n";
           ss << indentStr << "static " << getCppType(enumObj, GO::MakeOptional()) << " " << getFromCppWinrtName(enumObj) << "(" << getCppWinrtType(helperFile, enumObj, GO{ GO::MakeOptional(), GO::MakeReference() }) << " value);\n";
           ss << "\n";
 
           cppSS << dashedStr;
-          cppSS << getCppWinrtType(helperFile, enumObj, GO{ GO::MakeOptional(), GO::MakeReturnResult() }) << " Internal::Helper::" << getToCppWinrtName(helperFile, enumObj, GO{}) << "(" << getCppType(enumObj, GO::MakeOptional()) << "  &value)\n";
+          cppSS << getCppWinrtType(helperFile, enumObj, GO{ GO::MakeOptional(), GO::MakeReturnResult() }) << " Internal::Helper::" << getToCppWinrtName(helperFile, enumObj, GO{}) << "(const " << getCppType(enumObj, GO::MakeOptional()) << "  &value)\n";
           cppSS << "{\n";
           cppSS << "  if (!value.hasValue()) return nullptr;\n";
           cppSS << "  return Windows::Foundation::IReference< " << getCppWinrtType(helperFile, enumObj, GO{}) << " >(" << getToCppWinrtName(helperFile, enumObj, GO{}) << "(value.value()));\n";
