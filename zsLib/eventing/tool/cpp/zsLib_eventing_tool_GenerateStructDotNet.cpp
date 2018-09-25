@@ -1037,7 +1037,7 @@ namespace zsLib
             ss << indentStr << "{\n";
             ss << indentStr << "    var libPath = UseDynamicLib;\n";
             ss << indentStr << "    if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Windows))\n";
-            ss << indentStr << "        libPath = (System.Environment.Is64BitProcess ? \"x64\" : \"x86\") + UseDynamicLib;\n";
+            ss << indentStr << "        libPath = (System.Environment.Is64BitProcess ? \"x64\\\\\" : \"x86\\\\\") + UseDynamicLib;\n";
             ss << indentStr << "    else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.OSX))\n";
             ss << indentStr << "        libPath = UseDynamicLib.Replace(\".dll\",\".dylib\");\n";
             ss << indentStr << "    else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Linux))\n";
