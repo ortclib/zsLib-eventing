@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//third_party/idl/zsLib/zslib_sources.gni")
+import("//third_party/idl/tool_build.gni")
 
 config("zslib_eventing_config") {
     if  (is_win) {
@@ -108,71 +109,64 @@ zslib_eventing_tool_sources = [
 ]
 
 
-if (host_toolchain == current_toolchain) {
-# if ((current_cpu == "x86") || (current_cpu == "x64") ) {
-  executable("zslib-eventing-tool-compiler") {
+executable("zslib-eventing-tool-compiler") {
 
-      
-      configs += [ ":zslib_eventing_config" ]
-      configs -= [ "//build/config/compiler:chromium_code" ]
-      configs -= [ "//build/config/compiler:no_rtti" ]
-      
-      if (!is_win) {
-        configs -= [ "//build/config/gcc:no_exceptions" ]
-      }
-      sources = zslib_sources
-      sources += zslib_eventing_sources
-      sources += zslib_eventing_tool_sources
-      sources += [    
-        "projects/msvc/zsLib.Eventing.Tool.Compiler.Win32/main.cpp",
-        "projects/linux/codelite/zsLib-eventing-tool-compiler/main.cpp",
-      ]
+  configs += [ ":zslib_eventing_config" ]
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs -= [ "//build/config/compiler:no_rtti" ]
+  
+  if (!is_win) {
+    configs -= [ "//build/config/gcc:no_exceptions" ]
+  }
+  sources = zslib_sources
+  sources += zslib_eventing_sources
+  sources += zslib_eventing_tool_sources
+  sources += [    
+    "projects/msvc/zsLib.Eventing.Tool.Compiler.Win32/main.cpp",
+    "projects/linux/codelite/zsLib-eventing-tool-compiler/main.cpp",
+  ]
 
-      deps = [
-        #"//third_party/winuwp_compat:wrap_main_utf8_cc",
-        # Default manifest on Windows (a no-op elsewhere).
-        "//build/win:default_exe_manifest",
-      ]
-      
-      if (is_win && (current_os != "winuwp")) {
-        deps += [ "//third_party/idl/cryptopp(//build/toolchain/win:$current_cpu)", ]
-      } else {
-        deps += [ "//third_party/idl/cryptopp", ]
-      }
-      
-      if (is_linux) {
-        deps += [
-          "//buildtools/third_party/libc++",
-      ]
-        lib_dirs = [ "/usr/lib/x86_64-linux-gnu/" ]
-        libs = [ "uuid" ]
-      }
+  deps = [
+    # Default manifest on Windows (a no-op elsewhere).
+    "//build/win:default_exe_manifest",
+  ]
+  
+  deps += [ "//third_party/idl/cryptopp($tool_build_toolchain)", ]
 
-      if (is_mac || is_ios) {
-        libs = [ "CoreFoundation.framework",
-                 "Foundation.framework"
-               ]
-        sources += [
-          "projects/xcode/zsLib.Eventing.Compiler.Tool-osx.Tool/zsLib.Eventing.Compiler.Tool/main.cpp",
-        ]
-      }
+  
+  if (is_linux) {
+    deps += [
+      "//buildtools/third_party/libc++",
+  ]
+    lib_dirs = [ "/usr/lib/x86_64-linux-gnu/" ]
+    libs = [ "uuid" ]
+  }
 
-      if (!is_win) {
-      sources -= [
-          "zsLib/eventing/IIDLTypes.h",
-          "../zsLib/zsLib/eventing/internal/zsLib_eventing_EventTypes.h",
-          "../zsLib/zsLib/eventing/internal/zsLib_eventing_Log.h",
-          "../zsLib/zsLib/internal/zsLib.events_win_etw.h",
-          "projects/msvc/zsLib.Eventing.Tool.Compiler.Win32/main.cpp",
-        ]
-      }
-      defines = [
-        "ZSLIB_EVENTING_NOOP",
-        "_UNICODE",
-        "UNICODE",
-      ]
-    }
- }
+  if (is_mac || is_ios) {
+    libs = [ "CoreFoundation.framework",
+             "Foundation.framework"
+           ]
+    sources += [
+      "projects/xcode/zsLib.Eventing.Compiler.Tool-osx.Tool/zsLib.Eventing.Compiler.Tool/main.cpp",
+    ]
+  }
+
+  if (!is_win) {
+  sources -= [
+      "zsLib/eventing/IIDLTypes.h",
+      "../zsLib/zsLib/eventing/internal/zsLib_eventing_EventTypes.h",
+      "../zsLib/zsLib/eventing/internal/zsLib_eventing_Log.h",
+      "../zsLib/zsLib/internal/zsLib.events_win_etw.h",
+      "projects/msvc/zsLib.Eventing.Tool.Compiler.Win32/main.cpp",
+    ]
+  }
+  defines = [
+    "ZSLIB_EVENTING_NOOP",
+    "_UNICODE",
+    "UNICODE",
+  ]
+}
+
 
 static_library("zslib-eventing") {
 
