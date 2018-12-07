@@ -900,7 +900,12 @@ namespace zsLib
           cppSS << dashedStr;
           cppSS << "Windows::Foundation::DateTime Internal::Helper::ToCppWinrt(const ::zsLib::Time &value)\n";
           cppSS << "{\n";
-          cppSS << "  return Windows::Foundation::DateTime(std::chrono::duration_cast<Windows::Foundation::TimeSpan>(value.time_since_epoch()));\n";
+          cppSS << "  using namespace date;\n";
+          cppSS << "  if (zsLib::Time() == value)\n";
+          cppSS << "    return {};\n";
+          cppSS << "  auto t = sys_days(jan / 1 / 1601);\n";
+          cppSS << "  auto diff = std::chrono::duration_cast<Windows::Foundation::DateTime::duration>(value - t);\n";
+          cppSS << "  return Windows::Foundation::DateTime(diff);\n";
           cppSS << "}\n";
           cppSS << "\n";
 
@@ -915,10 +920,16 @@ namespace zsLib
           cppSS << dashedStr;
           cppSS << "::zsLib::Time Internal::Helper::FromCppWinrt(Windows::Foundation::DateTime value)\n";
           cppSS << "{\n";
-          cppSS << "  return ::zsLib::Time(std::chrono::duration_cast<::zsLib::Time::duration>(value.time_since_epoch()));\n";
+          cppSS << "  using namespace date;\n";
+          cppSS << "  if (Windows::Foundation::DateTime() == value)\n";
+          cppSS << "    return {};\n";
+          cppSS << "  static constexpr Windows::Foundation::DateTime::duration unitsSince1970{ 0x019DB1DED53E8000 };\n";
+          cppSS << "  auto diff = std::chrono::duration_cast<Windows::Foundation::DateTime::duration>(value.time_since_epoch());\n";
+          cppSS << "  auto since1970 = diff - unitsSince1970;\n";
+          cppSS << "  auto t = sys_days(jan / 1 / 1970);\n";
+          cppSS << "  return t + since1970;\n";
           cppSS << "}\n";
           cppSS << "\n";
-
 
           cppSS << dashedStr;
           cppSS << "Optional<::zsLib::Time> Internal::Helper::FromCppWinrt(Windows::Foundation::IReference<Windows::Foundation::DateTime> const & value)\n";
