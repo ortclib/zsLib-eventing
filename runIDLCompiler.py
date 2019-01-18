@@ -49,6 +49,8 @@ if not os.path.isfile(idlCompilationFlagPath):
 
   commandToExecute = compilerFullPath + " -idl " + idlLanguages + " -c " + jsonFile + " -o " + idlOutputPath
 
+  print("commandToExecute:" + commandToExecute)
+  
   result = os.system(commandToExecute)
   
   if result == 0:

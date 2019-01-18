@@ -42,10 +42,15 @@ if not os.path.isfile(eventCompilationPath):
   if (compilerFullPath==None):
     sys.exit("Idl compiler doesn't exist")
   
+  eventProviderName=os.path.splitext(os.path.basename(eventJsonPath))[0]
+
   os.chdir(os.path.dirname(eventJsonPath))
   eventJsonNewPath = os.path.join(os.getcwd(),os.path.basename(eventJsonPath))
- 
-  commandToExecute = compilerFullPath + " -c " + eventJsonNewPath + " -o " + idlOutputPath
+  eventsOutputPath = os.path.join(os.getcwd(), idlOutputPath, eventProviderName)
+  
+  commandToExecute = compilerFullPath + " -c " + eventJsonNewPath + " -o " + eventsOutputPath
+  
+  print("commandToExecute:" + commandToExecute)
   
   result = os.system(commandToExecute)
   
