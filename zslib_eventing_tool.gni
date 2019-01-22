@@ -34,6 +34,13 @@ template("compile_single_event_macro") {
       script = "//third_party/idl/zsLib-eventing/runEventCompiler.py"
       
       sources = invoker.sources
+      idlAlreadyCompletedFlag = invoker.idlAlreadyCompletedFlag
+      
+      if (defined(invoker.idlOutputPath)) {
+        idlOutputPath = invoker.idlOutputPath
+      } else {
+        idlOutputPath = "."
+      }
       
       #Not of interest. Added just because outputs is required by action
       outputs = [ 
@@ -42,7 +49,9 @@ template("compile_single_event_macro") {
 
       args = [
         rebase_path(sources[0], root_build_dir),
+        idlAlreadyCompletedFlag,
         "$current_cpu",
+        "$idlOutputPath",
         "$host_cpu",
       ]
 
@@ -72,11 +81,11 @@ template("compile_idl_macro") {
       }
 
       #Not of interest. Added just because outputs is required by action
-      #outputs = [ 
-      #  "$target_out_dir/{source_name_part}",
-      #]
+      outputs = [ 
+        "$target_out_dir/$target_name/{source_name_part}",
+      ]
 
-      outputs = invoker.outputs
+      #outputs = invoker.outputs
 
       args = [
         rebase_path(sources[0], root_build_dir),
