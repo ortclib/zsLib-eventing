@@ -427,11 +427,23 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
+        static String toName(const String &str) noexcept
+        {
+          String temp(str);
+          temp.replaceAll("-", "_");
+          temp.replaceAll("/", "_");
+          temp.replaceAll(".", "_");
+          temp.trim();
+          return temp;
+        }
+
+        //---------------------------------------------------------------------
         static String toSymbol(const String &str) noexcept
         {
           String temp(str);
           temp.replaceAll("-", "_");
           temp.replaceAll("/", "_");
+          temp.replaceAll(".", "_");
           temp.trim();
           temp.toUpper();
           return temp;
@@ -2318,7 +2330,7 @@ namespace zsLib
 
           ss << getFunctions();
 
-          String getEventingHandleFunction = "getEventHandle_" + provider->mName + "()";
+          String getEventingHandleFunction = "getEventHandle_" + toName(provider->mName) + "()";
           String getEventingHandleFunctionWithNamespace = "::zsLib::eventing::" + getEventingHandleFunction;
 
           ss <<
@@ -2329,9 +2341,9 @@ namespace zsLib
             "      return gHandle;\n"
             "    }\n\n";
 
-          ss << "#define ZS_INTERNAL_REGISTER_EVENTING_" << provider->mName << "() \\\n";
+          ss << "#define ZS_INTERNAL_REGISTER_EVENTING_" << toName(provider->mName) << "() \\\n";
           ss << "    { \\\n";
-          ss << "      ZS_EVENTING_REGISTER_EVENT_WRITER(" << getEventingHandleFunctionWithNamespace << ", \"" << string(provider->mID) << "\", \"" << provider->mName << "\", \"" << provider->mUniqueHash << "\", g" << provider->mName << "_JMANAsString); \\\n";
+          ss << "      ZS_EVENTING_REGISTER_EVENT_WRITER(" << getEventingHandleFunctionWithNamespace << ", \"" << string(provider->mID) << "\", \"" << toName(provider->mName) << "\", \"" << provider->mUniqueHash << "\", g" << toName(provider->mName) << "_JMANAsString); \\\n";
           for (auto iter = provider->mSubsystems.begin(); iter != provider->mSubsystems.end(); ++iter) {
             auto subsystem = (*iter).second;
             ss << "      ZS_EVENTING_REGISTER_SUBSYSTEM_DEFAULT_LEVEL(" << subsystem->mName << ", " << zsLib::Log::toString(subsystem->mLevel) << "); \\\n";
@@ -2339,7 +2351,7 @@ namespace zsLib
           ss << "    }\n";
           ss << "\n";
 
-          ss << "#define ZS_INTERNAL_UNREGISTER_EVENTING_" << provider->mName << "() ZS_EVENTING_UNREGISTER_EVENT_WRITER(" << getEventingHandleFunctionWithNamespace << ")\n\n";
+          ss << "#define ZS_INTERNAL_UNREGISTER_EVENTING_" << toName(provider->mName) << "() ZS_EVENTING_UNREGISTER_EVENT_WRITER(" << getEventingHandleFunctionWithNamespace << ")\n\n";
 
           for (auto iter = provider->mEvents.begin(); iter != provider->mEvents.end(); ++iter)
           {
@@ -2845,8 +2857,8 @@ namespace zsLib
 
           ss << "#endif /* ZS_EVENTING_REGISTER */\n\n";
 
-          ss << "#define ZS_INTERNAL_REGISTER_EVENTING_" << provider->mName << "() EventRegister" << provider->mName << "()\n";
-          ss << "#define ZS_INTERNAL_UNREGISTER_EVENTING_" << provider->mName << "() EventUnregister" << provider->mName << "()\n\n";
+          ss << "#define ZS_INTERNAL_REGISTER_EVENTING_" << toName(provider->mName) << "() EventRegister" << toName(provider->mName) << "()\n";
+          ss << "#define ZS_INTERNAL_UNREGISTER_EVENTING_" << toName(provider->mName) << "() EventUnregister" << toName(provider->mName) << "()\n\n";
 
           for (auto iter = provider->mEvents.begin(); iter != provider->mEvents.end(); ++iter)
           {
@@ -3200,7 +3212,7 @@ namespace zsLib
             std::stringstream ssPostFix;
 
             ssPrefix << "/* " ZS_EVENTING_GENERATED_BY " */\n\n";
-            ssPrefix << "static const char g" << provider->mName << "_JMANAsString [] = {";
+            ssPrefix << "static const char g" << toName(provider->mName) << "_JMANAsString [] = {";
 
             ssPostFix << "0};\n";
 
