@@ -47,7 +47,12 @@ if not os.path.isfile(idlCompilationFlagPath):
   os.chdir(os.path.dirname(idlPath))
   jsonFile=os.path.basename(idlPath)
 
-  commandToExecute = compilerFullPath + " -idl " + idlLanguages + " -c " + jsonFile + " -o " + idlOutputPath
+  useImplFlag = os.getenv('IDL_COMPILER_IMPL', None)
+  
+  if useImplFlag:
+    commandToExecute = compilerFullPath + " -idl " + idlLanguages + " impl -c " + jsonFile + " -o " + idlOutputPath
+  else:
+    commandToExecute = compilerFullPath + " -idl " + idlLanguages + " -c " + jsonFile + " -o " + idlOutputPath
 
   print("commandToExecute:" + commandToExecute)
   
