@@ -1408,6 +1408,7 @@ namespace zsLib
           auto &ss = structFile.headerStructPrivateSS_;
           auto &pubSS = structFile.headerStructPublicSS_;
           auto &cppSS = structFile.cppBodySS_;
+          auto &cppObserverChangeSS = structFile.cppObserverChangeSS_;
           auto &cppIncludeSS = structFile.cppIncludeSS_;
           auto &observerSS = structFile.headerStructObserverSS_;
           auto &observerFinalSS = structFile.headerStructObserverFinalSS_;
@@ -1513,6 +1514,8 @@ namespace zsLib
           ss << indentStr << getCppType(structObj, GO{}) << " native_;\n";
           if (hasEvents) {
             ss << indentStr << "wrapper" << structObj->getPathName() << "::WrapperObserverPtr observer_;\n";
+            ss << indentStr << "zsLib::Lock observerLock_;\n";
+            ss << indentStr << "bool observerInstalled_ {};\n";
           }
           ss << "\n";
           ss << indentStr << "struct WrapperCreate {};\n";
@@ -1567,7 +1570,6 @@ namespace zsLib
           cppSS << "  result->native_ = value;\n";
           if (hasEvents) {
             cppSS << "  result->observer_ = make_shared<WrapperObserverImpl>(result);\n";
-            cppSS << "  result->native_->wrapper_installObserver(result->observer_);\n";
           }
           cppSS << "  return result;\n";
           cppSS << "}\n";
@@ -1723,12 +1725,24 @@ namespace zsLib
           }
 
           if (hasEvents) {
+            observerSS << indentStr << "void HandleWrapperObserversChanged() noexcept;\n\n";
             observerSS << indentStr << "struct WrapperObserverImpl : public wrapper" << structObj->getPathName() << "::WrapperObserver \n";
             observerSS << indentStr << "{\n";
             observerSS << indentStr << "  WrapperObserverImpl(" << getCppWinrtType(helperFile, structObj, GO{GO::MakeImplementation(), GO::MakeReference(), GO::MakeComPtr()}) << " owner) : owner_(owner) {}\n";
             observerSS << "\n";
             observerFinalSS << indentStr << "  " << getCppWinrtType(helperFile, structObj, GO{ GO::MakeImplementation(), GO::MakeComPtr() }) << " owner_;\n";
             observerFinalSS << indentStr << "};\n";
+
+            cppObserverChangeSS << dashedStr;
+            cppObserverChangeSS << "void " << getCppWinrtType(helperFile, structObj, GO{ GO::MakeImplementation() }) << "::HandleWrapperObserversChanged() noexcept\n";
+            cppObserverChangeSS <<
+            "{\n"
+            "  bool needObserver {true};\n"
+            "  zsLib::AutoLock lock(observerLock_);\n"
+            "  if (!native_)\n"
+            "    return;\n"
+            "  bool hasObserver = observerInstalled_;\n"
+            "  do {\n";
           }
 
           bool foundCast = false;
@@ -1831,7 +1845,7 @@ namespace zsLib
 
           indentStr = indentStr.substr(0, indentStr.length() - 2);
 
-          includeSS << indentStr << "} // namepsace implementation\n\n";
+          includeSS << indentStr << "} // namespace implementation\n\n";
 
           includeSS << indentStr << "namespace factory_implementation {\n";
 
@@ -1852,8 +1866,23 @@ namespace zsLib
 
           includeSS << "#endif //" << (structObj->hasModifier(Modifier_Special) ? "ifndef" : "") << " " << ifdefName << "\n";
 
+          if (hasEvents) {
+            cppObserverChangeSS <<
+            "    needObserver = false;\n"
+            "  } while (false);\n"
+            "  if (needObserver == hasObserver)\n"
+            "    return;\n"
+            "  observerInstalled_ = needObserver;\n"
+            "  if (needObserver)\n"
+            "    native_->wrapper_installObserver(observer_);\n"
+            "  else\n"
+            "    native_->wrapper_uninstallObserver(observer_);\n"
+            "}\n";
+          }
+
           cppIncludeSS << "\n";
           cppIncludeSS << cppSS.str();
+          cppIncludeSS << cppObserverChangeSS.str();
           cppIncludeSS << "\n";
           cppIncludeSS << "#endif //" << (structObj->hasModifier(Modifier_Special) ? "ifndef" : "") << " " << ifdefName << "\n";
 
@@ -1879,6 +1908,7 @@ namespace zsLib
           auto &headerMethodsSS = structFile.headerStructPublicSS_;
           auto &delegateSS = structFile.headerStructEventHandlersSS_;
           auto &observerSS = structFile.headerStructObserverSS_;
+          auto &cppObserverChangeSS = structFile.cppObserverChangeSS_;
           auto &cppSS = structFile.cppBodySS_;
           auto &indentStr = structFile.headerStructIndentStr_;
 
@@ -1948,7 +1978,6 @@ namespace zsLib
               implSS << methodImplIndentStr << "if (!result->native_) {throw hresult_error(E_POINTER);}\n";
               if (hasEvents) {
                 implSS << methodImplIndentStr << "result->observer_ = make_shared<WrapperObserverImpl>(result);\n";
-                implSS << methodImplIndentStr << "result->native_->wrapper_installObserver(result->observer_);\n";
               }
             } else if (hasResult) {
               implSS << methodImplIndentStr << getCppWinrtType(helperFile, method->mResult, GO{ GO::Optional(method->hasModifier(Modifier_Optional)), GO::MakeInterface(), GO::MakeReturnResult()}) << " result {" << getCppWinrtResultTypeInitializer(method->mResult) << "};\n";
@@ -2000,10 +2029,16 @@ namespace zsLib
                 delegateNameStr += "Delegate";
               }
 
+              cppObserverChangeSS << "    if (" << methodName << "Event_) break;\n";
+
               cppSS << dashedStr;
               cppSS << "winrt::event_token " << getCppWinrtType(helperFile, derivedStructObj, GO{ GO::MakeImplementation() }) << "::" << fixName(methodName) << "(" << delegateNameStr << " const &handler)\n";
               cppSS << "{\n";
-              cppSS << methodImplIndentStr << "return " << methodName << "Event_.add(handler);\n";
+              cppSS << methodImplIndentStr << "auto result = " << methodName << "Event_.add(handler);\n";
+              cppSS << methodImplIndentStr << "HandleWrapperObserversChanged();\n";
+              cppSS << methodImplIndentStr << "bool hadObserver = " << methodName << "EventHasObservers_.exchange(true);\n";
+              cppSS << methodImplIndentStr << "if ((native_) && (!hadObserver)) native_->wrapper_onObserver" << methodName << "CountChanged(1);\n";
+              cppSS << methodImplIndentStr << "return result;\n";
               cppSS << "}\n";
               cppSS << "\n";
 
@@ -2011,6 +2046,10 @@ namespace zsLib
               cppSS << "void " << getCppWinrtType(helperFile, derivedStructObj, GO{ GO::MakeImplementation() }) << "::" << fixName(methodName) << "(winrt::event_token const &token)\n";
               cppSS << "{\n";
               cppSS << methodImplIndentStr << methodName << "Event_.remove(token);\n";
+              cppSS << methodImplIndentStr << "bool needObserver = ((bool)" << methodName << "Event_);\n";
+              cppSS << methodImplIndentStr << "bool hadObserver = " << methodName << "EventHasObservers_.exchange(needObserver);\n";
+              cppSS << methodImplIndentStr << "if ((native_) && (hadObserver) && (!needObserver)) native_->wrapper_onObserver" << methodName << "CountChanged(0);\n";
+              cppSS << methodImplIndentStr << "HandleWrapperObserversChanged();\n";
               cppSS << "}\n";
               cppSS << "\n";
 
@@ -2018,6 +2057,7 @@ namespace zsLib
               cppSS << "void " << getCppWinrtType(helperFile, derivedStructObj, GO{ GO::MakeImplementation() }) << "::WrapperObserverImpl::" << methodName << "(";
 
               delegateSS << indentStr << "winrt::event< " << delegateNameStr << " > " << methodName << "Event_;\n";
+              delegateSS << indentStr << "std::atomic_bool " << methodName << "EventHasObservers_ {};\n";
               if (method->mArguments.size() > 1) {
                 observerSS << "\n";
                 observerSS << indentStr << "  ";
@@ -2142,9 +2182,6 @@ namespace zsLib
               } else {
                 cppSS << "  if (" << (isEvent ? "nullptr == owner_" : "!native_") << ") {throw hresult_error(E_POINTER);}\n";
               }
-            }
-            if (((isCtor) && (!ctorNeedsToBecomeStaticMethod)) && (hasEvents)) {
-              cppSS << "  native_->wrapper_installObserver(observer_);\n";
             }
             cppSS << implSS.str();
             cppSS << "}\n";
