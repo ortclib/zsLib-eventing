@@ -113,6 +113,7 @@ namespace zsLib
             std::stringstream headerStructObserverFinalSS_;
             std::stringstream headerStructPublicSS_;
             std::stringstream cppIncludeSS_;
+            std::stringstream cppObserverChangeSS_;
             std::stringstream cppBodySS_;
             String headerIndentStr_;
             String headerStructIndentStr_;

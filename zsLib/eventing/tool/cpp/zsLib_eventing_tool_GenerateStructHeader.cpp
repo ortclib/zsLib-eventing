@@ -465,6 +465,9 @@ namespace zsLib
                 observerMethodsSS << indentStr << "void wrapper_observerClean() noexcept { wrapper_installObserver(WrapperObserverPtr()); }\n\n";
                 foundEventHandler = true;
               }
+
+              observerMethodsSS << indentStr << "virtual void wrapper_onObserver" << methodObj->mName << "CountChanged(ZS_MAYBE_USED() size_t count) noexcept { ZS_MAYBE_USED(count); }\n";
+
               observerSS << indentStr << "  virtual void " << methodObj->mName << "(";
               observerMethodsSS << indentStr << "void " << methodObj->mName << "(";
 
