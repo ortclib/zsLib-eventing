@@ -6,7 +6,9 @@ import("//third_party/idl/zsLib/zslib_sources.gni")
 import("//third_party/idl/tool_build.gni")
 
 config("zslib_eventing_config") {
+    configs = []
     if  (is_win) {
+      configs += [ "//build/config/win:cpp17" ]
       cflags_cc = [ 
         "/WX-",
         "/wd4068",
@@ -133,6 +135,11 @@ executable("zslib-eventing-tool-compiler") {
   
   deps += [ "//third_party/idl/cryptopp($tool_build_toolchain)", ]
 
+  if (is_win) {
+    libs = [
+    "WindowsApp.lib"
+    ]
+  }
   
   if (is_linux) {
     deps += [

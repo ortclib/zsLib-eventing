@@ -540,6 +540,26 @@ namespace zsLib
           return isFloat(type->mBaseType);
         }
 
+        //---------------------------------------------------------------------
+        bool GenerateHelper::isDefaultExceptionType(TypePtr type)
+        {
+          if (!type) return false;
+
+          auto structType = type->toStruct();
+          if (!structType) return false;
+
+          if (structType->mGenerics.size() > 0) return false;
+
+          if (!structType->hasModifier(Modifier_Special)) return false;
+
+          String comparison("::zs::exceptions::");
+          String specialName = structType->getPathName();
+
+          specialName = specialName.substr(0, comparison.length());
+
+          return comparison == specialName;
+        }
+
       } // namespace internal
     } // namespace tool
   } // namespace eventing

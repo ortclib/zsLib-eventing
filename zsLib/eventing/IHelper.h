@@ -31,11 +31,9 @@ either expressed or implied, of the FreeBSD Project.
 
 #pragma once
 
-#ifdef WINUWP
 #ifdef CPPWINRT_VERSION
 #include <winrt/windows.ui.core.h>
 #endif //CPPWINRT_VERSION
-#endif //WINUWP
 
 #include <zsLib/eventing/types.h>
 #include <zsLib/IHelper.h>
@@ -51,11 +49,9 @@ namespace zsLib
     interaction IHelper : public zsLib::IHelper
     {
       static void setup() noexcept;
-#ifdef WINUWP
 #ifdef CPPWINRT_VERSION
       static void setup(winrt::Windows::UI::Core::CoreDispatcher dispatcher) noexcept;
 #endif //CPPWINRT_VERSION
-#endif //WINUWP
 
       static SecureByteBlockPtr loadFile(const char *path) noexcept(false); // throws StdError
       static void saveFile(const char *path, SecureByteBlock &buffer) noexcept(false); // throws StdError

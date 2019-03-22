@@ -96,6 +96,8 @@ namespace zsLib
 
           static bool isFloat(IEventingTypes::PredefinedTypedefs type);
           static bool isFloat(BasicTypePtr type);
+
+          static bool isDefaultExceptionType(TypePtr type);
         };
 
       } // namespace internal

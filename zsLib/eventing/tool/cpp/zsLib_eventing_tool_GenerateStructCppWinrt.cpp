@@ -2127,7 +2127,7 @@ namespace zsLib
               auto throwType = (*iterThrows);
               if (!throwType) continue;
               implSS << "  } catch(const " << getCppType(throwType, GO{}) << " &e) {\n";
-              if (isDefaultExceptionType(throwType)) {
+              if (GenerateHelper::isDefaultExceptionType(throwType)) {
                 implSS << "    throw ::Internal::Helper::" << getToCppWinrtName(helperFile, throwType, GO{}) << "(e);\n";
               } else {
                 implSS << "    ::Internal::Helper::Throwers::singleton().customThrow(e);\n";
@@ -2621,26 +2621,6 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        bool GenerateStructCppWinrt::isDefaultExceptionType(TypePtr type)
-        {
-          if (!type) return false;
-
-          auto structType = type->toStruct();
-          if (!structType) return false;
-
-          if (structType->mGenerics.size() > 0) return false;
-
-          if (!structType->hasModifier(Modifier_Special)) return false;
-
-          String comparison("::zs::exceptions::");
-          String specialName = structType->getPathName();
-
-          specialName = specialName.substr(0, comparison.length());
-
-          return comparison == specialName;
-        }
-
-        //---------------------------------------------------------------------
         String GenerateStructCppWinrt::getCppType(
                                                   TypePtr type,
                                                   const GenerationOptions &options
@@ -2648,6 +2628,7 @@ namespace zsLib
         {
           return GenerateStructHeader::getWrapperTypeString(options.isOptional(), type);
         }
+
         //---------------------------------------------------------------------
         String GenerateStructCppWinrt::getCppWinrtType(
                                                        const HelperFile &helperFile,

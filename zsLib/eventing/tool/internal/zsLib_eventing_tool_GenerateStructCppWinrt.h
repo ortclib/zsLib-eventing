@@ -417,7 +417,6 @@ namespace zsLib
                                                                   const String &value,
                                                                   const GenerationOptions &options
                                                                   ) noexcept;
-          static bool isDefaultExceptionType(TypePtr type);
           static String getCppType(
                                    TypePtr type,
                                    const GenerationOptions &options
