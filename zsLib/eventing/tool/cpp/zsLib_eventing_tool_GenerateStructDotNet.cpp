@@ -2076,7 +2076,7 @@ namespace zsLib
               ss << indentStr << "        var cValue = " << getApiPath(apiFile) << "." << GenerateStructC::fixType(templatedStructType) << "_wrapperIterValue(iterHandle);\n";
 
               if (isMap) {
-                ss << indentStr << "        var csKey = " << getAdoptFromCMethod(apiFile, false, listType) << "(cKey);\n";
+                ss << indentStr << "        var csKey = " << getAdoptFromCMethod(apiFile, false, keyType) << "(cKey);\n";
               }
               ss << indentStr << "        var csValue = " << getAdoptFromCMethod(apiFile, false, listType) << "(cValue);\n";
               if (isList) {
@@ -3601,7 +3601,18 @@ namespace zsLib
                 if (!arg) continue;
                 if (!first) ss << ", ";
                 first = false;
-                ss << getAdoptFromCMethod(apiFile, method->hasModifier(Modifier_Optional), arg->mType) << "(" << getApiPath(apiFile) << ".callback_event_get_data(handle, " << index << "))";
+                bool isSimple = false;
+                bool isOptional = method->hasModifier(Modifier_Optional);
+                String basicTypeStr;
+                {
+                  auto basicType = arg->mType->toBasicType();
+                  if (basicType) {
+                    basicTypeStr = fixCCsType(basicType->mBaseType);
+                    if (("binary_t" != basicTypeStr) && ("string_t" != basicTypeStr) && ("raw_pointer_t" != basicTypeStr)) isSimple = true;
+                  }
+                }
+                bool needUnboxing = isSimple && (!isOptional);
+                ss << getAdoptFromCMethod(apiFile, isOptional || isSimple, arg->mType) << "(" << getApiPath(apiFile) << ".callback_event_get_data(handle, " << index << "))" << (needUnboxing ? (" ?? default(" + basicTypeStr + ")").c_str() : "");
               }
               ss << ");\n";
               ss << indentStr << "}\n";
