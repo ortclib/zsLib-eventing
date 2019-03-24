@@ -248,12 +248,16 @@ namespace zsLib
               if ("::zs::Promise" == specialName) return true;
               if ("::zs::PromiseWith" == specialName) return true;
               if ("::zs::PromiseRejectionReason" == specialName) return true;
-              if ("::zs::exceptions::Exception" == specialName) return true;
-              if ("::zs::exceptions::InvalidArgument" == specialName) return true;
-              if ("::zs::exceptions::BadState" == specialName) return true;
-              if ("::zs::exceptions::NotImplemented" == specialName) return true;
-              if ("::zs::exceptions::NotSupported" == specialName) return true;
-              if ("::zs::exceptions::UnexpectedError" == specialName) return true;
+
+              // check exceptions
+              {
+                auto exceptionList = GenerateHelper::getAllExceptions("::zs::exceptions::");
+                for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                  String e = (*iter);
+                  if (e == specialName) return true;
+                }
+              }
+
               if ("::zs::Time" == specialName) return true;
               if ("::zs::Milliseconds" == specialName) return true;
               if ("::zs::Microseconds" == specialName) return true;
@@ -558,6 +562,32 @@ namespace zsLib
           specialName = specialName.substr(0, comparison.length());
 
           return comparison == specialName;
+        }
+
+        //-------------------------------------------------------------------
+        GenerateHelper::StringList GenerateHelper::getAllExceptions(const char *prefix) noexcept
+        {
+          StringList result;
+
+          String prefixStr(prefix);
+
+          result.push_back(prefixStr + "Exception");
+          result.push_back(prefixStr + "InvalidArgument");
+          result.push_back(prefixStr + "BadState");
+          result.push_back(prefixStr + "SyntaxError");
+          result.push_back(prefixStr + "RangeError");
+          result.push_back(prefixStr + "ResourceError");
+          result.push_back(prefixStr + "UnexpectedError");
+          result.push_back(prefixStr + "InvalidUsage");
+          result.push_back(prefixStr + "InvalidAssumption");
+          result.push_back(prefixStr + "NotImplemented");
+          result.push_back(prefixStr + "NotSupported");
+          result.push_back(prefixStr + "RangeError");
+          result.push_back(prefixStr + "InvalidModification");
+          result.push_back(prefixStr + "NetworkError");
+          result.push_back(prefixStr + "InternalError");
+
+          return result;
         }
 
       } // namespace internal

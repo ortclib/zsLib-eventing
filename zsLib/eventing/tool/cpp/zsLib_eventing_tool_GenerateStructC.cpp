@@ -544,12 +544,16 @@ namespace zsLib
               if ("::zs::Promise" == specialName) return "wrapper::zs_Promise_wrapperToHandle";
               if ("::zs::PromiseWith" == specialName) return "wrapper::zs_Promise_wrapperToHandle";
               if ("::zs::PromiseRejectionReason" == specialName) return String();
-              if ("::zs::exceptions::Exception" == specialName) return "wrapper::exception_Exception_wrapperToHandle";
-              if ("::zs::exceptions::InvalidArgument" == specialName) return "wrapper::exception_InvalidArgument_wrapperToHandle";
-              if ("::zs::exceptions::BadState" == specialName) return "wrapper::exception_BadState_wrapperToHandle";
-              if ("::zs::exceptions::NotImplemented" == specialName) return "wrapper::exception_NotImplemented_wrapperToHandle";
-              if ("::zs::exceptions::NotSupported" == specialName) return "wrapper::exception_NotSupported_wrapperToHandle";
-              if ("::zs::exceptions::UnexpectedError" == specialName) return "wrapper::exception_UnexpectedError_wrapperToHandle";
+
+              // check exceptions
+              {
+                auto exceptionList = GenerateHelper::getAllExceptions(nullptr);
+                for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                  auto e = (*iter);
+                  if (("::zs::exceptions::" + e) == specialName) return "wrapper::exception_" + e + "_wrapperToHandle";
+                }
+              }
+
               if ("::zs::Time" == specialName) return "wrapper::zs_Time_wrapperToHandle";
               if ("::zs::Milliseconds" == specialName) return "wrapper::zs_Milliseconds_wrapperToHandle";
               if ("::zs::Microseconds" == specialName) return "wrapper::zs_Microseconds_wrapperToHandle";
@@ -1236,13 +1240,15 @@ namespace zsLib
             ss << "\n";
           }
 
-          prepareHelperExceptions(helperFile, "Exception");
-          prepareHelperExceptions(helperFile, "InvalidArgument");
-          prepareHelperExceptions(helperFile, "BadState");
-          prepareHelperExceptions(helperFile, "NotImplemented");
-          prepareHelperExceptions(helperFile, "NotSupported");
-          prepareHelperExceptions(helperFile, "UnexpectedError");
-
+          // exceptions
+          {
+            auto exceptionList = GenerateHelper::getAllExceptions(nullptr);
+            for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+              String e = *iter;
+              prepareHelperExceptions(helperFile, e);
+            }
+          }
+          
           {
             auto &ss = helperFile.headerCFunctionsSS_;
             ss << "\n";
@@ -3820,12 +3826,15 @@ namespace zsLib
 
           processTypesSpecialStruct(ss, context->findType("::zs::Any"));
           processTypesSpecialStruct(ss, context->findType("::zs::Promise"));
-          processTypesSpecialStruct(ss, context->findType("::zs::Exception"));
-          processTypesSpecialStruct(ss, context->findType("::zs::InvalidArgument"));
-          processTypesSpecialStruct(ss, context->findType("::zs::BadState"));
-          processTypesSpecialStruct(ss, context->findType("::zs::NotImplemented"));
-          processTypesSpecialStruct(ss, context->findType("::zs::NotSupported"));
-          processTypesSpecialStruct(ss, context->findType("::zs::UnexpectedError"));
+
+          {
+            auto exceptionList = GenerateHelper::getAllExceptions("::zs::exceptions::");
+            for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+              auto e = (*iter);
+              processTypesSpecialStruct(ss, context->findType(e));
+            }
+          }
+
           ss << "\n";
 
           processTypesSpecialStruct(ss, context->findType("::zs::Time"));

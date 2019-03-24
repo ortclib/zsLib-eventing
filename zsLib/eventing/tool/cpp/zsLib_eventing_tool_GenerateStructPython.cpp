@@ -720,9 +720,17 @@ namespace zsLib
                 if ("::zs::exceptions::Exception" == specialName) return "Exception";
                 if ("::zs::exceptions::InvalidArgument" == specialName) return "ValueError";
                 if ("::zs::exceptions::BadState" == specialName) return "RuntimeError";
+                if ("::zs::exceptions::SyntaxError" == specialName) return "SyntaxError";
                 if ("::zs::exceptions::NotImplemented" == specialName) return "NotImplementedError";
                 if ("::zs::exceptions::NotSupported" == specialName) return "StandardError";
                 if ("::zs::exceptions::UnexpectedError" == specialName) return "SystemError";
+                if ("::zs::exceptions::RangeError" == specialName) return "IndexError";
+                if ("::zs::exceptions::ResourceError" == specialName) return "MemoryError";
+                if ("::zs::exceptions::InvalidUsage" == specialName) return "AttributeError";
+                if ("::zs::exceptions::InvalidAssumption" == specialName) return "AssertionError";
+                if ("::zs::exceptions::InvalidModification" == specialName) return "UnboundLocalError";
+                if ("::zs::exceptions::NetworkError" == specialName) return "IOError";
+                if ("::zs::exceptions::InternalError" == specialName) return "SystemError";
 
                 if ("::zs::Any" == specialName) return "object";
                 if ("::zs::Promise" == specialName) return "wrapper.Promise";
@@ -1766,12 +1774,13 @@ namespace zsLib
             ss << indentStr << "      return None\n";
           }
 
-          prepareApiExceptions(apiFile, "InvalidArgument");
-          prepareApiExceptions(apiFile, "BadState");
-          prepareApiExceptions(apiFile, "NotImplemented");
-          prepareApiExceptions(apiFile, "NotSupported");
-          prepareApiExceptions(apiFile, "UnexpectedError");
-          prepareApiExceptions(apiFile, "Exception");
+          {
+            auto exceptionList = GenerateHelper::getAllExceptions(nullptr);
+            for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+              auto e = (*iter);
+              prepareApiExceptions(apiFile, e);
+            }
+          }
 
           {
             auto &ss = apiFile.helpersSS_;

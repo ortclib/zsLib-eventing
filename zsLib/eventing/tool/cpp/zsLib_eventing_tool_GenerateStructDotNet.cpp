@@ -508,9 +508,17 @@ namespace zsLib
                 if ("::zs::exceptions::Exception" == specialName) return "System.Exception";
                 if ("::zs::exceptions::InvalidArgument" == specialName) return "System.ArgumentException";
                 if ("::zs::exceptions::BadState" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::SyntaxError" == specialName) return "System.Data.SyntaxErrorException";
                 if ("::zs::exceptions::NotImplemented" == specialName) return "System.NotImplementedException";
                 if ("::zs::exceptions::NotSupported" == specialName) return "System.NotSupportedException";
                 if ("::zs::exceptions::UnexpectedError" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::RangeError" == specialName) return "System.IndexOutOfRangeException";
+                if ("::zs::exceptions::ResourceError" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::InvalidUsage" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::InvalidAssumption" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::InvalidModification" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::NetworkError" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::InternalError" == specialName) return "System.Runtime.InteropServices.COMException";
 
                 if ("::zs::Any" == specialName) return "object";
                 if ("::zs::Promise" == specialName) return "System.Threading.Tasks.Task";
@@ -998,6 +1006,12 @@ namespace zsLib
             ss << indentStr << "    private const System.UInt32 E_NOT_VALID_STATE = 5023;\n";
             ss << indentStr << "    private const System.UInt32 CO_E_NOT_SUPPORTED = 0x80004021;\n";
             ss << indentStr << "    private const System.UInt32 E_UNEXPECTED = 0x8000FFFF;\n";
+            ss << indentStr << "    private const System.UInt32 E_OUTOFMEMORY = 0x8007000E;\n";
+            ss << indentStr << "    private const System.UInt32 E_ILLEGAL_METHOD_CALL = 0x8000000E;\n";
+            ss << indentStr << "    private const System.UInt32 NS_E_INVALID_REQUEST = 0xC00D002B;\n";
+            ss << indentStr << "    private const System.UInt32 E_ILLEGAL_STATE_CHANGE = 0x8000000D;\n";
+            ss << indentStr << "    private const System.UInt32 CS_E_NETWORK_ERROR = 0x8004016C;\n";
+            ss << indentStr << "    private const System.UInt32 E_ABORT = 0x80004004;\n";
           }
 
           {
@@ -1498,12 +1512,13 @@ namespace zsLib
             ss << indentStr << "    if (!" << getApiPath(apiFile) << ".exception_hasException(handle)) return null;\n";
           }
 
-          prepareApiExceptions(apiFile, "InvalidArgument");
-          prepareApiExceptions(apiFile, "BadState");
-          prepareApiExceptions(apiFile, "NotImplemented");
-          prepareApiExceptions(apiFile, "NotSupported");
-          prepareApiExceptions(apiFile, "UnexpectedError");
-          prepareApiExceptions(apiFile, "Exception");
+          {
+            auto exceptionList = GenerateHelper::getAllExceptions(nullptr);
+            for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+              auto e = (*iter);
+              prepareApiExceptions(apiFile, e);
+            }
+          }
 
           {
             auto &ss = apiFile.helpersSS_;
@@ -1554,6 +1569,13 @@ namespace zsLib
             ss << indentStr << "    if (" << getApiPath(apiFile) << ".exception_is_" << exceptionName << "(handle)) return new " << fixCsType(contextStruct) << "(" << getApiPath(apiFile) << ".exception_what(handle)";
             if ("BadState" == exceptionName)  ss << ", unchecked((System.Int32)E_NOT_VALID_STATE)";
             if ("UnexpectedError" == exceptionName)  ss << ", unchecked((System.Int32)E_UNEXPECTED)";
+            if ("ResourceError" == exceptionName)  ss << ", unchecked((System.Int32)E_OUTOFMEMORY)";
+            if ("InvalidUsage" == exceptionName)  ss << ", unchecked((System.Int32)E_ILLEGAL_METHOD_CALL)";
+            if ("InvalidAssumption" == exceptionName)  ss << ", unchecked((System.Int32)E_ILLEGAL_STATE_CHANGE)";
+            if ("InvalidModification" == exceptionName)  ss << ", unchecked((System.Int32)E_ILLEGAL_STATE_CHANGE)";
+            if ("NetworkError" == exceptionName)  ss << ", unchecked((System.Int32)CS_E_NETWORK_ERROR)";
+            if ("InternalError" == exceptionName)  ss << ", unchecked((System.Int32)E_ABORT)";
+
             ss << ");\n";
           }
         }
