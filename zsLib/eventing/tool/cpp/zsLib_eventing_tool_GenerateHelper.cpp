@@ -582,7 +582,6 @@ namespace zsLib
           result.push_back(prefixStr + "InvalidAssumption");
           result.push_back(prefixStr + "NotImplemented");
           result.push_back(prefixStr + "NotSupported");
-          result.push_back(prefixStr + "RangeError");
           result.push_back(prefixStr + "InvalidModification");
           result.push_back(prefixStr + "NetworkError");
           result.push_back(prefixStr + "InternalError");
