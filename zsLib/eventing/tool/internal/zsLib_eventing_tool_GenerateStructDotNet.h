@@ -222,8 +222,12 @@ namespace zsLib
 
           static bool hasInterface(StructPtr structObj) noexcept;
 
+          static String getStructInitName(StructPtr structObj) noexcept;
+
           static String getApiCastRequiredDefine(BaseFile &baseFile) noexcept;
-          static String getApiPath(BaseFile &baseFile) noexcept;
+          static String getApiPath(
+            BaseFile &baseFile,
+            bool useOverride = false) noexcept;
           static String getHelperPath(BaseFile &enumFile) noexcept;
 
           static bool shouldDeriveFromException(

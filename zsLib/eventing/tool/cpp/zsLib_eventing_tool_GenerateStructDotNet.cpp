@@ -836,7 +836,9 @@ namespace zsLib
             }
           }
 
-          return (useApiHelper ? getApiPath(baseFile) : getHelperPath(baseFile)) + "." + GenerateStructC::fixType(type) + methodName;
+          bool overrideSpecial = type->hasModifier(Modifier_Special) && (!GenerateHelper::isBuiltInType(type));
+
+          return (useApiHelper ? getApiPath(baseFile, overrideSpecial) : getHelperPath(baseFile)) + "." + GenerateStructC::fixType(type) + methodName;
         }
 
         //---------------------------------------------------------------------
@@ -897,6 +899,12 @@ namespace zsLib
           return !((bool)found);
         }
 
+        //-------------------------------------------------------------------
+        String GenerateStructDotNet::getStructInitName(StructPtr structObj) noexcept
+        {
+          return GenerateStructHeader::getStructInitName(structObj);
+        }
+
         //---------------------------------------------------------------------
         String GenerateStructDotNet::getApiCastRequiredDefine(BaseFile &baseFile) noexcept
         {
@@ -911,9 +919,11 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructDotNet::getApiPath(BaseFile &baseFile) noexcept
+        String GenerateStructDotNet::getApiPath(
+          BaseFile &baseFile,
+          bool useOverride) noexcept
         {
-          return "Wrapper." + GenerateStructCx::fixName(baseFile.project_->getMappingName(),".","_") + ".Api";
+          return "Wrapper." + GenerateStructCx::fixName(baseFile.project_->getMappingName(),".","_") + (useOverride ? ".OverrideApi" : ".Api");
         }
 
         //---------------------------------------------------------------------
@@ -1022,31 +1032,31 @@ namespace zsLib
             ss << indentStr << "{\n";
             apiFile.indentMore();
             ss << "#if __TVOS__ && __UNIFIED__\n";
-            ss << indentStr << "private const string UseDynamicLib = \"@rpath/" << libNameStr << ".framework/" << libNameStr << "\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"@rpath/" << libNameStr << ".framework/" << libNameStr << "\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif __IOS__ && __UNIFIED__\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dylib\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".dylib\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif __ANDROID__\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".so\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".so\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif __MACOS__\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dylib\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".dylib\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif DESKTOP\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dll\"; // redirect using .dll.config to '" << libNameStr << ".dylib' on OS X\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".dll\"; // redirect using .dll.config to '" << libNameStr << ".dylib' on OS X\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif WINDOWS_UWP\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dll\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".dll\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif NET_STANDARD\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << "\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << "\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif NETSTANDARD2_0\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dll\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".dll\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << indentStr << "[DllImport(\"kernel32.dll\")]\n";
-            ss << indentStr << "private static extern System.IntPtr LoadLibrary(string dllToLoad);\n\n";
+            ss << indentStr << "internal static extern System.IntPtr LoadLibrary(string dllToLoad);\n\n";
             ss << indentStr << "static Api()\n";
             ss << indentStr << "{\n";
             ss << indentStr << "    var libPath = UseDynamicLib;\n";
@@ -1059,12 +1069,12 @@ namespace zsLib
             ss << indentStr << "    Api.LoadLibrary(libPath);\n";
             ss << indentStr << "}\n";
             ss << "#else\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << "\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << "\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#endif\n";
             ss << "\n";
-            ss << indentStr << "private const UnmanagedType UseBoolMashal = UnmanagedType.I1;\n";
-            ss << indentStr << "private const UnmanagedType UseStringMarshal = UnmanagedType.LPStr;\n";
+            ss << indentStr << "internal const UnmanagedType UseBoolMashal = UnmanagedType.I1;\n";
+            ss << indentStr << "internal const UnmanagedType UseStringMarshal = UnmanagedType.LPStr;\n";
             ss << "\n";
           }
 
@@ -2708,9 +2718,14 @@ namespace zsLib
           structFile.global_ = apiFile.global_;
           structFile.fileName_ = UseHelper::fixRelativeFilePath(apiFile.fileName_, "net_" + GenerateStructC::fixType(structObj) + ".cs");
 
+          bool isSpecial = structObj->hasModifier(Modifier_Special);
+
           {
             auto &ss = structFile.usingNamespaceSS_;
             ss << "// " ZS_EVENTING_GENERATED_BY "\n\n";
+            if (isSpecial) {
+              ss << "#if CS_USE_GENERATED_" << getStructInitName(structObj) << "\n\n";
+            }
           }
 
           auto &indentStr = structFile.indent_;
@@ -2778,6 +2793,13 @@ namespace zsLib
           }
 
           apiFile.startRegion(fixCsPathType(structObj));
+
+          if (isSpecial) {
+            {
+              auto &ss = apiFile.structSS_;
+              ss << "\n#if CS_USE_GENERATED_" << getStructInitName(structObj) << "\n\n";
+            }
+          }
 
           structFile.indentMore();
 
@@ -2942,6 +2964,13 @@ namespace zsLib
 
           processStruct(apiFile, structFile, structObj, structObj);
 
+          if (isSpecial) {
+            {
+              auto &ss = apiFile.structSS_;
+              ss << "#endif // CS_USE_GENERATED_" << getStructInitName(structObj) << "\n\n";
+            }
+          }
+
           apiFile.endRegion(fixCsPathType(structObj));
 
           structFile.indentLess();
@@ -2962,6 +2991,11 @@ namespace zsLib
               structFile.indentLess();
               ss << indentStr << "} //" << GenerateStructCx::fixName(namespaceObj->getMappingName()) << "\n";
             }
+          }
+
+          if (isSpecial) {
+            auto &ss = structFile.namespaceEndSS_;
+            ss << "\n\n#endif // CS_USE_GENERATED_" << getStructInitName(structObj) << "\n\n";
           }
 
           finalizeBaseFile(structFile);
