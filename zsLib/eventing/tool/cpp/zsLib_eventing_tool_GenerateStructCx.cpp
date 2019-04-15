@@ -645,6 +645,31 @@ namespace zsLib
           if (derives.end() != derives.find("::zs::exceptions::UnexpectedError")) {
             ss << helperFile.mHeaderIndentStr << "static Platform::COMException^ ToCx(const ::zsLib::Exceptions::UnexpectedError &e) { return ref new Platform::COMException(E_UNEXPECTED, ToCx_String(e.message())); }\n";
           }
+          if (derives.end() != derives.find("::zs::exceptions::SyntaxError")) {
+            ss << helperFile.mHeaderIndentStr << "static Platform::COMException^ ToCx(const ::zsLib::Exceptions::SyntaxError &e) { return ref new Platform::COMException(MK_E_SYNTAX, ToCx_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::RangeError")) {
+            ss << helperFile.mHeaderIndentStr << "static Platform::COMException^ ToCx(const ::zsLib::Exceptions::RangeError &e) { return ref new Platform::COMException(E_BOUNDS, ToCx_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::ResourceError")) {
+            ss << helperFile.mHeaderIndentStr << "static Platform::COMException^ ToCx(const ::zsLib::Exceptions::ResourceError &e) { return ref new Platform::COMException(E_OUTOFMEMORY, ToCx_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::InvalidUsage")) {
+            ss << helperFile.mHeaderIndentStr << "static Platform::COMException^ ToCx(const ::zsLib::Exceptions::InvalidUsage &e) { return ref new Platform::COMException(E_ILLEGAL_METHOD_CALL, ToCx_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::InvalidAssumption")) {
+            ss << helperFile.mHeaderIndentStr << "static Platform::COMException^ ToCx(const ::zsLib::Exceptions::InvalidAssumption &e) { return ref new Platform::COMException(NS_E_INVALID_REQUEST, ToCx_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::InvalidModification")) {
+            ss << helperFile.mHeaderIndentStr << "static Platform::COMException^ ToCx(const ::zsLib::Exceptions::InvalidModification &e) { return ref new Platform::COMException(E_ILLEGAL_STATE_CHANGE, ToCx_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::NetworkError")) {
+            ss << helperFile.mHeaderIndentStr << "static Platform::COMException^ ToCx(const ::zsLib::Exceptions::NetworkError &e) { return ref new Platform::COMException(CS_E_NETWORK_ERROR, ToCx_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::InternalError")) {
+            ss << helperFile.mHeaderIndentStr << "static Platform::COMException^ ToCx(const ::zsLib::Exceptions::InternalError &e) { return ref new Platform::COMException(E_ABORT, ToCx_String(e.message())); }\n";
+          }
+
           ss << "\n";
         }
 
@@ -2300,6 +2325,15 @@ namespace zsLib
                 if ("::zs::exceptions::NotImplemented" == specialName) return "Platform::NotImplementedException^";
                 if ("::zs::exceptions::NotSupported" == specialName) return "Platform::COMException^";
                 if ("::zs::exceptions::UnexpectedError" == specialName) return "Platform::COMException^";
+                if ("::zs::exceptions::SyntaxError" == specialName) return "Platform::COMException^";
+                if ("::zs::exceptions::RangeError" == specialName) return "Platform::COMException^";
+                if ("::zs::exceptions::ResourceError" == specialName) return "Platform::COMException^";
+                if ("::zs::exceptions::InvalidUsage" == specialName) return "Platform::COMException^";
+                if ("::zs::exceptions::InvalidAssumption" == specialName) return "Platform::COMException^";
+                if ("::zs::exceptions::InvalidModification" == specialName) return "Platform::COMException^";
+                if ("::zs::exceptions::NetworkError" == specialName) return "Platform::COMException^";
+                if ("::zs::exceptions::InternalError" == specialName) return "Platform::COMException^";
+
                 if ("::zs::Time" == specialName) return makeCxOptional(isOptional, "Windows::Foundation::DateTime");
                 if ("::zs::Milliseconds" == specialName) return makeCxOptional(isOptional, "Windows::Foundation::TimeSpan");
                 if ("::zs::Microseconds" == specialName) return makeCxOptional(isOptional, "Windows::Foundation::TimeSpan");
@@ -2433,12 +2467,15 @@ namespace zsLib
 
               if ("::zs::Any" == specialName) return String();
               if ("::zs::Promise" == specialName) return String();
-              if ("::zs::exceptions::Exception" == specialName) return String();
-              if ("::zs::exceptions::InvalidArgument" == specialName) return String();
-              if ("::zs::exceptions::BadState" == specialName) return String();
-              if ("::zs::exceptions::NotImplemented" == specialName) return String();
-              if ("::zs::exceptions::NotSupported" == specialName) return String();
-              if ("::zs::exceptions::UnexpectedError" == specialName) return String();
+
+              {
+                auto exceptionList = GenerateHelper::getAllExceptions("::zs::exceptions::");
+                for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                  auto e = (*iter);
+                  if (e == specialName) return String();
+                }
+              }
+
               if ("::zs::Time" == specialName) return String();
               if ("::zs::Milliseconds" == specialName) return String("Milliseconds");
               if ("::zs::Microseconds" == specialName) return String("Microseconds");
@@ -2545,12 +2582,15 @@ namespace zsLib
 
               if ("::zs::Any" == specialName) return;
               if ("::zs::Promise" == specialName) return;
-              if ("::zs::exceptions::Exception" == specialName) return;
-              if ("::zs::exceptions::InvalidArgument" == specialName) return;
-              if ("::zs::exceptions::BadState" == specialName) return;
-              if ("::zs::exceptions::NotImplemented" == specialName) return;
-              if ("::zs::exceptions::NotSupported" == specialName) return;
-              if ("::zs::exceptions::UnexpectedError" == specialName) return;
+
+              {
+                auto exceptionList = GenerateHelper::getAllExceptions("::zs::exceptions::");
+                for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                  auto e = (*iter);
+                  if (e == specialName) return;
+                }
+              }
+
               if ("::zs::Time" == specialName) return;
               if ("::zs::Milliseconds" == specialName) return;
               if ("::zs::Microseconds" == specialName) return;

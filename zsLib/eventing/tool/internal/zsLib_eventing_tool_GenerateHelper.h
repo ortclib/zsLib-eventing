@@ -33,6 +33,8 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <zsLib/eventing/tool/internal/zsLib_eventing_tool_IDLCompiler.h>
 
+#include <list>
+
 namespace zsLib
 {
   namespace eventing
@@ -53,6 +55,8 @@ namespace zsLib
 
         struct GenerateHelper : public IDLCompiler
         {
+          typedef std::list<String> StringList;
+
           static String getDashedComment(const String &indent);
 
           static String getDocumentation(
@@ -96,6 +100,10 @@ namespace zsLib
 
           static bool isFloat(IEventingTypes::PredefinedTypedefs type);
           static bool isFloat(BasicTypePtr type);
+
+          static bool isDefaultExceptionType(TypePtr type);
+
+          static StringList getAllExceptions(const char *prefix) noexcept;
         };
 
       } // namespace internal

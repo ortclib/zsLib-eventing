@@ -356,12 +356,14 @@ namespace zsLib
                   idl.import("windows.foundation.idl");
                   return "Windows.Foundation.IAsyncAction";  // should be IAsyncAction but need a way to return promise rejection reasons
                 }
-                if ("::zs::exceptions::Exception" == specialName) return "Object";
-                if ("::zs::exceptions::InvalidArgument" == specialName) return "Object";
-                if ("::zs::exceptions::BadState" == specialName) return "Object";
-                if ("::zs::exceptions::NotImplemented" == specialName) return "Object";
-                if ("::zs::exceptions::NotSupported" == specialName) return "Object";
-                if ("::zs::exceptions::UnexpectedError" == specialName) return "Object";
+                
+                {
+                  auto exceptionList = GenerateHelper::getAllExceptions("::zs::exceptions::");
+                  for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                    auto e = (*iter);
+                    if (e == specialName) return "Object";
+                  }
+                }
 
                 idl.import("windows.foundation.idl");
                 if ("::zs::Time" == specialName) return toIdlSimpleType(idl, options, "Windows.Foundation.DateTime");

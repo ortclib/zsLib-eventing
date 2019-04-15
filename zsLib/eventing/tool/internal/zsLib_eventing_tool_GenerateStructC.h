@@ -59,6 +59,8 @@ namespace zsLib
           typedef std::set<String> StringSet;
           typedef std::set<StructPtr> StructSet;
           typedef std::map<NamePath, StructSet> NamePathStructSetMap;
+          typedef std::set<TypePtr> TypeSet;
+          ZS_DECLARE_PTR(TypeSet);
 
           struct HelperFile
           {
@@ -73,6 +75,7 @@ namespace zsLib
             std::stringstream headerCFunctionsSS_;
             std::stringstream headerCppIncludeSS_;
             std::stringstream headerCppFunctionsSS_;
+            std::stringstream headerThrowersSS_;
 
             std::stringstream cIncludeSS_;
             std::stringstream cFunctionsSS_;
@@ -84,6 +87,7 @@ namespace zsLib
             StringSet headerCppAlreadyIncluded_;
             StringSet cAlreadyIncluded_;
             StringSet cppAlreadyIncluded_;
+            TypeSet alreadyThrows_;
 
             HelperFile() noexcept;
             ~HelperFile() noexcept;
@@ -93,6 +97,7 @@ namespace zsLib
             void includeC(const String &headerFile) noexcept;
             void includeCpp(const String &headerFile) noexcept;
             bool hasBoxing(const String &namePathStr) noexcept;
+            void specialThrow(TypePtr type) noexcept;
           };
 
           struct StructFile
@@ -192,6 +197,7 @@ namespace zsLib
                                        TemplatedStructTypePtr templatedStruct = TemplatedStructTypePtr()
                                        ) noexcept;
           static void calculateBoxings(
+                                       bool fromEventMethod,
                                        PropertyPtr property,
                                        StringSet &ioBoxings,
                                        TemplatedStructTypePtr templatedStruct = TemplatedStructTypePtr()

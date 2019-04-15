@@ -126,6 +126,18 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
+        void GenerateStructC::HelperFile::specialThrow(TypePtr rejectionType) noexcept
+        {
+          if (!rejectionType) return;
+
+          if (alreadyThrows_.end() != alreadyThrows_.find(rejectionType)) return;
+          alreadyThrows_.insert(rejectionType);
+          auto &ss = headerThrowersSS_;
+
+          ss << "    void customThrow_set_Exception(exception_handle_t handle, const " << GenerateStructHeader::getWrapperTypeString(false, rejectionType) << " &error) noexcept;\n";
+        }
+
+        //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
         //---------------------------------------------------------------------
@@ -396,6 +408,7 @@ namespace zsLib
 
           auto name = project->mName;
           name.toUpper();
+          name.replaceAll(".","_");
           return name + "_WRAPPER_C_GENERATED_IMPLEMENTATION";
         }
 
@@ -411,6 +424,7 @@ namespace zsLib
 
           auto name = project->mName;
           name.toUpper();
+          name.replaceAll(".","_");
           return name + "_WRAPPER_C_GENERATED_REQUIRES_CAST";
         }
 
@@ -426,6 +440,7 @@ namespace zsLib
 
           auto name = project->mName;
           name.toUpper();
+          name.replaceAll(".","_");
           return name + "_WRAPPER_C_EXPORT_API";
         }
 
@@ -442,6 +457,7 @@ namespace zsLib
 
           auto name = project->mName;
           name.toUpper();
+          name.replaceAll(".","_");
           return name + "_WRAPPER_C_CASTED_EXPORT_API";
         }
 
@@ -528,12 +544,16 @@ namespace zsLib
               if ("::zs::Promise" == specialName) return "wrapper::zs_Promise_wrapperToHandle";
               if ("::zs::PromiseWith" == specialName) return "wrapper::zs_Promise_wrapperToHandle";
               if ("::zs::PromiseRejectionReason" == specialName) return String();
-              if ("::zs::exceptions::Exception" == specialName) return "wrapper::exception_Exception_wrapperToHandle";
-              if ("::zs::exceptions::InvalidArgument" == specialName) return "wrapper::exception_InvalidArgument_wrapperToHandle";
-              if ("::zs::exceptions::BadState" == specialName) return "wrapper::exception_BadState_wrapperToHandle";
-              if ("::zs::exceptions::NotImplemented" == specialName) return "wrapper::exception_NotImplemented_wrapperToHandle";
-              if ("::zs::exceptions::NotSupported" == specialName) return "wrapper::exception_NotSupported_wrapperToHandle";
-              if ("::zs::exceptions::UnexpectedError" == specialName) return "wrapper::exception_UnexpectedError_wrapperToHandle";
+
+              // check exceptions
+              {
+                auto exceptionList = GenerateHelper::getAllExceptions(nullptr);
+                for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                  auto e = (*iter);
+                  if (("::zs::exceptions::" + e) == specialName) return "wrapper::exception_" + e + "_wrapperToHandle";
+                }
+              }
+
               if ("::zs::Time" == specialName) return "wrapper::zs_Time_wrapperToHandle";
               if ("::zs::Milliseconds" == specialName) return "wrapper::zs_Milliseconds_wrapperToHandle";
               if ("::zs::Microseconds" == specialName) return "wrapper::zs_Microseconds_wrapperToHandle";
@@ -746,7 +766,7 @@ namespace zsLib
           for (auto iter = structObj->mProperties.begin(); iter != structObj->mProperties.end(); ++iter)
           {
             auto property = (*iter);
-            calculateBoxings(property, ioBoxings);
+            calculateBoxings(false, property, ioBoxings);
           }
         }
 
@@ -769,24 +789,27 @@ namespace zsLib
         {
           if (!method) return;
 
+          bool isEventHandler = method->hasModifier(Modifier_Method_EventHandler);
+
           calculateBoxingType(method->hasModifier(Modifier_Optional), method->mResult, ioBoxings, templatedStruct);
 
           for (auto iter = method->mArguments.begin(); iter != method->mArguments.end(); ++iter)
           {
             auto arg = (*iter);
-            calculateBoxings(arg, ioBoxings, templatedStruct);
+            calculateBoxings(isEventHandler, arg, ioBoxings, templatedStruct);
           }
         }
 
         //---------------------------------------------------------------------
         void GenerateStructC::calculateBoxings(
+                                               bool fromEventMethod,
                                                PropertyPtr property,
                                                StringSet &ioBoxings,
                                                TemplatedStructTypePtr templatedStruct
                                                ) noexcept
         {
           if (!property) return;
-          calculateBoxingType(property->hasModifier(Modifier_Optional), property->mType, ioBoxings, templatedStruct);
+          calculateBoxingType(property->hasModifier(Modifier_Optional) || fromEventMethod, property->mType, ioBoxings, templatedStruct);
         }
 
         //---------------------------------------------------------------------
@@ -965,21 +988,6 @@ namespace zsLib
           }
 
           prepareHelperNamespace(helperFile, helperFile.global_);
-
-          {
-            auto &ss = helperFile.headerCppFunctionsSS_;
-
-            ss << "\n";
-            ss << "} /* namespace wrapper */\n";
-            ss << "#endif /* __cplusplus */\n";
-          }
-
-          {
-            auto &ss = helperFile.cppFunctionsSS_;
-
-            ss << "\n";
-            ss << "} /* namespace wrapper */\n";
-          }
         }
 
         //---------------------------------------------------------------------
@@ -1148,6 +1156,14 @@ namespace zsLib
             ss << "\n";
           }
           {
+            auto &ss = helperFile.headerThrowersSS_;
+            ss << "\n";
+            ss << "  struct Throwers\n";
+            ss << "  {\n";
+            ss << "    static Throwers &singleton() noexcept;\n";
+            ss << "\n";
+          }
+          {
             auto &ss = helperFile.headerCppFunctionsSS_;
             ss << "  void exception_set_Exception(exception_handle_t handle, shared_ptr<::zsLib::Exception> exception) noexcept;\n";
             ss << "\n";
@@ -1218,19 +1234,21 @@ namespace zsLib
             ss << "    typedef shared_ptr<ExceptionType> ExceptionTypePtr;\n";
             ss << "    typedef ExceptionTypePtr * ExceptionTypePtrRawPtr;\n";
             ss << "    if (0 == handle) return;\n";
-            ss << "    auto ptr = (*reinterpret_cast<ExceptionTypePtrRawPtr>(handle));\n";
+            ss << "    auto &ptr = (*reinterpret_cast<ExceptionTypePtrRawPtr>(handle));\n";
             ss << "    ptr = exception;\n";
             ss << "  }\n";
             ss << "\n";
           }
 
-          prepareHelperExceptions(helperFile, "Exception");
-          prepareHelperExceptions(helperFile, "InvalidArgument");
-          prepareHelperExceptions(helperFile, "BadState");
-          prepareHelperExceptions(helperFile, "NotImplemented");
-          prepareHelperExceptions(helperFile, "NotSupported");
-          prepareHelperExceptions(helperFile, "UnexpectedError");
-
+          // exceptions
+          {
+            auto exceptionList = GenerateHelper::getAllExceptions(nullptr);
+            for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+              String e = *iter;
+              prepareHelperExceptions(helperFile, e);
+            }
+          }
+          
           {
             auto &ss = helperFile.headerCFunctionsSS_;
             ss << "\n";
@@ -2205,7 +2223,7 @@ namespace zsLib
 
                 if (isMap) {
                   if (keyType->toEnumType()) {
-                    keyTypeStr = "static_cast<" + GenerateStructHeader::getWrapperTypeString(false, listType) + ">(key)";
+                    keyTypeStr = "static_cast<" + GenerateStructHeader::getWrapperTypeString(false, keyType) + ">(key)";
                   } else if ((keyType->toBasicType()) &&
                              ("string_t" != fixCType(keyType))) {
                     keyTypeStr = "key";
@@ -2662,6 +2680,24 @@ namespace zsLib
         void GenerateStructC::finalizeHelperFile(HelperFile &helperFile) noexcept
         {
           {
+            auto &ss = helperFile.headerCppFunctionsSS_;
+
+            ss << helperFile.headerThrowersSS_.str();
+            ss << "  };\n";
+
+            ss << "\n";
+            ss << "} /* namespace wrapper */\n";
+            ss << "#endif /* __cplusplus */\n";
+          }
+
+          {
+            auto &ss = helperFile.cppFunctionsSS_;
+
+            ss << "\n";
+            ss << "} /* namespace wrapper */\n";
+          }
+
+          {
             std::stringstream ss;
 
             appendStream(ss, helperFile.headerCIncludeSS_);
@@ -3020,7 +3056,12 @@ namespace zsLib
                   auto throwType = (*iterThrow);
                   includeType(structFile, throwType);
                   ss << "  } catch (const " << GenerateStructHeader::getWrapperTypeString(false, throwType) << " &e) {\n";
-                  ss << "    wrapper::exception_set_Exception(wrapperExceptionHandle, make_shared<::zsLib::" << ("Exception" == throwType->getMappingName() ? "" : "Exceptions::") << throwType->getMappingName() << ">(e));\n";
+                  if (GenerateHelper::isDefaultExceptionType(throwType)) {
+                    ss << "    wrapper::exception_set_Exception(wrapperExceptionHandle, make_shared<::zsLib::" << ("Exception" == throwType->getMappingName() ? "" : "Exceptions::") << throwType->getMappingName() << ">(e));\n";
+                  } else {
+                    ss << "    wrapper::Throwers::singleton().customThrow_set_Exception(wrapperExceptionHandle, e);\n";
+                    helperFile.specialThrow(throwType);
+                  }
                 }
                 ss << "  }\n";
                 if (hasResult) {
@@ -3081,7 +3122,7 @@ namespace zsLib
                 }
               }
 
-              if (!foundConstructor) {
+              if (GenerateHelper::needsDefaultConstructor(structObj)) {
                 {
                   auto &ss = structFile.headerCFunctionsSS_;
                   ss << exportStr << " " << fixCType(structObj) << " " << getApiCallingDefine(structObj) << " " << fixType(rootStructObj) << "_wrapperCreate_" << structObj->getMappingName() << "();\n";
@@ -3348,7 +3389,7 @@ namespace zsLib
                   ss << "    if (" << (index-1) << " == argumentIndex) ";
                   bool isSimple = false;
                   {
-                    auto basicType = propertyObj->toBasicType();
+                    auto basicType = propertyObj->mType->toBasicType();
                     if (basicType) {
                       String basicTypeStr = fixCType(basicType->mBaseType);
                       if (("binary_t" != basicTypeStr) && ("string_t" != basicTypeStr)) isSimple = true;
@@ -3785,12 +3826,15 @@ namespace zsLib
 
           processTypesSpecialStruct(ss, context->findType("::zs::Any"));
           processTypesSpecialStruct(ss, context->findType("::zs::Promise"));
-          processTypesSpecialStruct(ss, context->findType("::zs::Exception"));
-          processTypesSpecialStruct(ss, context->findType("::zs::InvalidArgument"));
-          processTypesSpecialStruct(ss, context->findType("::zs::BadState"));
-          processTypesSpecialStruct(ss, context->findType("::zs::NotImplemented"));
-          processTypesSpecialStruct(ss, context->findType("::zs::NotSupported"));
-          processTypesSpecialStruct(ss, context->findType("::zs::UnexpectedError"));
+
+          {
+            auto exceptionList = GenerateHelper::getAllExceptions("::zs::exceptions::");
+            for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+              auto e = (*iter);
+              processTypesSpecialStruct(ss, context->findType(e));
+            }
+          }
+
           ss << "\n";
 
           processTypesSpecialStruct(ss, context->findType("::zs::Time"));
@@ -3907,9 +3951,8 @@ namespace zsLib
           helperFile.headerFileName_ = UseHelper::fixRelativeFilePath(pathStr, String("c_helpers.h"));
 
           prepareHelperFile(helperFile);
-
-          finalizeHelperFile(helperFile);
           processNamespace(helperFile, helperFile.global_);
+          finalizeHelperFile(helperFile);
         }
 
       } // namespace internal

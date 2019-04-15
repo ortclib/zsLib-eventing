@@ -508,9 +508,17 @@ namespace zsLib
                 if ("::zs::exceptions::Exception" == specialName) return "System.Exception";
                 if ("::zs::exceptions::InvalidArgument" == specialName) return "System.ArgumentException";
                 if ("::zs::exceptions::BadState" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::SyntaxError" == specialName) return "System.Data.SyntaxErrorException";
                 if ("::zs::exceptions::NotImplemented" == specialName) return "System.NotImplementedException";
                 if ("::zs::exceptions::NotSupported" == specialName) return "System.NotSupportedException";
                 if ("::zs::exceptions::UnexpectedError" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::RangeError" == specialName) return "System.IndexOutOfRangeException";
+                if ("::zs::exceptions::ResourceError" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::InvalidUsage" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::InvalidAssumption" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::InvalidModification" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::NetworkError" == specialName) return "System.Runtime.InteropServices.COMException";
+                if ("::zs::exceptions::InternalError" == specialName) return "System.Runtime.InteropServices.COMException";
 
                 if ("::zs::Any" == specialName) return "object";
                 if ("::zs::Promise" == specialName) return "System.Threading.Tasks.Task";
@@ -828,7 +836,9 @@ namespace zsLib
             }
           }
 
-          return (useApiHelper ? getApiPath(baseFile) : getHelperPath(baseFile)) + "." + GenerateStructC::fixType(type) + methodName;
+          bool overrideSpecial = type->hasModifier(Modifier_Special) && (!GenerateHelper::isBuiltInType(type));
+
+          return (useApiHelper ? getApiPath(baseFile, overrideSpecial) : getHelperPath(baseFile)) + "." + GenerateStructC::fixType(type) + methodName;
         }
 
         //---------------------------------------------------------------------
@@ -889,6 +899,12 @@ namespace zsLib
           return !((bool)found);
         }
 
+        //-------------------------------------------------------------------
+        String GenerateStructDotNet::getStructInitName(StructPtr structObj) noexcept
+        {
+          return GenerateStructHeader::getStructInitName(structObj);
+        }
+
         //---------------------------------------------------------------------
         String GenerateStructDotNet::getApiCastRequiredDefine(BaseFile &baseFile) noexcept
         {
@@ -903,9 +919,11 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        String GenerateStructDotNet::getApiPath(BaseFile &baseFile) noexcept
+        String GenerateStructDotNet::getApiPath(
+          BaseFile &baseFile,
+          bool useOverride) noexcept
         {
-          return "Wrapper." + GenerateStructCx::fixName(baseFile.project_->getMappingName(),".","_") + ".Api";
+          return "Wrapper." + GenerateStructCx::fixName(baseFile.project_->getMappingName(),".","_") + (useOverride ? ".OverrideApi" : ".Api");
         }
 
         //---------------------------------------------------------------------
@@ -998,6 +1016,12 @@ namespace zsLib
             ss << indentStr << "    private const System.UInt32 E_NOT_VALID_STATE = 5023;\n";
             ss << indentStr << "    private const System.UInt32 CO_E_NOT_SUPPORTED = 0x80004021;\n";
             ss << indentStr << "    private const System.UInt32 E_UNEXPECTED = 0x8000FFFF;\n";
+            ss << indentStr << "    private const System.UInt32 E_OUTOFMEMORY = 0x8007000E;\n";
+            ss << indentStr << "    private const System.UInt32 E_ILLEGAL_METHOD_CALL = 0x8000000E;\n";
+            ss << indentStr << "    private const System.UInt32 NS_E_INVALID_REQUEST = 0xC00D002B;\n";
+            ss << indentStr << "    private const System.UInt32 E_ILLEGAL_STATE_CHANGE = 0x8000000D;\n";
+            ss << indentStr << "    private const System.UInt32 CS_E_NETWORK_ERROR = 0x8004016C;\n";
+            ss << indentStr << "    private const System.UInt32 E_ABORT = 0x80004004;\n";
           }
 
           {
@@ -1008,31 +1032,31 @@ namespace zsLib
             ss << indentStr << "{\n";
             apiFile.indentMore();
             ss << "#if __TVOS__ && __UNIFIED__\n";
-            ss << indentStr << "private const string UseDynamicLib = \"@rpath/" << libNameStr << ".framework/" << libNameStr << "\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"@rpath/" << libNameStr << ".WrapperC.framework/" << libNameStr << "\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif __IOS__ && __UNIFIED__\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dylib\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".WrapperC.dylib\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif __ANDROID__\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".so\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".WrapperC.so\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif __MACOS__\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dylib\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".WrapperC.dylib\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif DESKTOP\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dll\"; // redirect using .dll.config to '" << libNameStr << ".dylib' on OS X\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".WrapperC.dll\"; // redirect using .dll.config to '" << libNameStr << ".dylib' on OS X\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif WINDOWS_UWP\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dll\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".WrapperC.dll\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif NET_STANDARD\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << "\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << "\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#elif NETSTANDARD2_0\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << ".dll\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << ".WrapperC.dll\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << indentStr << "[DllImport(\"kernel32.dll\")]\n";
-            ss << indentStr << "private static extern System.IntPtr LoadLibrary(string dllToLoad);\n\n";
+            ss << indentStr << "internal static extern System.IntPtr LoadLibrary(string dllToLoad);\n\n";
             ss << indentStr << "static Api()\n";
             ss << indentStr << "{\n";
             ss << indentStr << "    var libPath = UseDynamicLib;\n";
@@ -1045,12 +1069,12 @@ namespace zsLib
             ss << indentStr << "    Api.LoadLibrary(libPath);\n";
             ss << indentStr << "}\n";
             ss << "#else\n";
-            ss << indentStr << "private const string UseDynamicLib = \"" << libNameStr << "\";\n";
-            ss << indentStr << "private const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
+            ss << indentStr << "internal const string UseDynamicLib = \"" << libNameStr << "\";\n";
+            ss << indentStr << "internal const CallingConvention UseCallingConvention = CallingConvention.Cdecl;\n";
             ss << "#endif\n";
             ss << "\n";
-            ss << indentStr << "private const UnmanagedType UseBoolMashal = UnmanagedType.I1;\n";
-            ss << indentStr << "private const UnmanagedType UseStringMarshal = UnmanagedType.LPStr;\n";
+            ss << indentStr << "internal const UnmanagedType UseBoolMashal = UnmanagedType.I1;\n";
+            ss << indentStr << "internal const UnmanagedType UseStringMarshal = UnmanagedType.LPStr;\n";
             ss << "\n";
           }
 
@@ -1498,12 +1522,13 @@ namespace zsLib
             ss << indentStr << "    if (!" << getApiPath(apiFile) << ".exception_hasException(handle)) return null;\n";
           }
 
-          prepareApiExceptions(apiFile, "InvalidArgument");
-          prepareApiExceptions(apiFile, "BadState");
-          prepareApiExceptions(apiFile, "NotImplemented");
-          prepareApiExceptions(apiFile, "NotSupported");
-          prepareApiExceptions(apiFile, "UnexpectedError");
-          prepareApiExceptions(apiFile, "Exception");
+          {
+            auto exceptionList = GenerateHelper::getAllExceptions(nullptr);
+            for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+              auto e = (*iter);
+              prepareApiExceptions(apiFile, e);
+            }
+          }
 
           {
             auto &ss = apiFile.helpersSS_;
@@ -1554,6 +1579,13 @@ namespace zsLib
             ss << indentStr << "    if (" << getApiPath(apiFile) << ".exception_is_" << exceptionName << "(handle)) return new " << fixCsType(contextStruct) << "(" << getApiPath(apiFile) << ".exception_what(handle)";
             if ("BadState" == exceptionName)  ss << ", unchecked((System.Int32)E_NOT_VALID_STATE)";
             if ("UnexpectedError" == exceptionName)  ss << ", unchecked((System.Int32)E_UNEXPECTED)";
+            if ("ResourceError" == exceptionName)  ss << ", unchecked((System.Int32)E_OUTOFMEMORY)";
+            if ("InvalidUsage" == exceptionName)  ss << ", unchecked((System.Int32)E_ILLEGAL_METHOD_CALL)";
+            if ("InvalidAssumption" == exceptionName)  ss << ", unchecked((System.Int32)E_ILLEGAL_STATE_CHANGE)";
+            if ("InvalidModification" == exceptionName)  ss << ", unchecked((System.Int32)E_ILLEGAL_STATE_CHANGE)";
+            if ("NetworkError" == exceptionName)  ss << ", unchecked((System.Int32)CS_E_NETWORK_ERROR)";
+            if ("InternalError" == exceptionName)  ss << ", unchecked((System.Int32)E_ABORT)";
+
             ss << ");\n";
           }
         }
@@ -2076,7 +2108,7 @@ namespace zsLib
               ss << indentStr << "        var cValue = " << getApiPath(apiFile) << "." << GenerateStructC::fixType(templatedStructType) << "_wrapperIterValue(iterHandle);\n";
 
               if (isMap) {
-                ss << indentStr << "        var csKey = " << getAdoptFromCMethod(apiFile, false, listType) << "(cKey);\n";
+                ss << indentStr << "        var csKey = " << getAdoptFromCMethod(apiFile, false, keyType) << "(cKey);\n";
               }
               ss << indentStr << "        var csValue = " << getAdoptFromCMethod(apiFile, false, listType) << "(cValue);\n";
               if (isList) {
@@ -2686,9 +2718,14 @@ namespace zsLib
           structFile.global_ = apiFile.global_;
           structFile.fileName_ = UseHelper::fixRelativeFilePath(apiFile.fileName_, "net_" + GenerateStructC::fixType(structObj) + ".cs");
 
+          bool isSpecial = structObj->hasModifier(Modifier_Special);
+
           {
             auto &ss = structFile.usingNamespaceSS_;
             ss << "// " ZS_EVENTING_GENERATED_BY "\n\n";
+            if (isSpecial) {
+              ss << "#if CS_USE_GENERATED_" << getStructInitName(structObj) << "\n\n";
+            }
           }
 
           auto &indentStr = structFile.indent_;
@@ -2756,6 +2793,13 @@ namespace zsLib
           }
 
           apiFile.startRegion(fixCsPathType(structObj));
+
+          if (isSpecial) {
+            {
+              auto &ss = apiFile.structSS_;
+              ss << "\n#if CS_USE_GENERATED_" << getStructInitName(structObj) << "\n\n";
+            }
+          }
 
           structFile.indentMore();
 
@@ -2920,6 +2964,13 @@ namespace zsLib
 
           processStruct(apiFile, structFile, structObj, structObj);
 
+          if (isSpecial) {
+            {
+              auto &ss = apiFile.structSS_;
+              ss << "#endif // CS_USE_GENERATED_" << getStructInitName(structObj) << "\n\n";
+            }
+          }
+
           apiFile.endRegion(fixCsPathType(structObj));
 
           structFile.indentLess();
@@ -2940,6 +2991,11 @@ namespace zsLib
               structFile.indentLess();
               ss << indentStr << "} //" << GenerateStructCx::fixName(namespaceObj->getMappingName()) << "\n";
             }
+          }
+
+          if (isSpecial) {
+            auto &ss = structFile.namespaceEndSS_;
+            ss << "\n\n#endif // CS_USE_GENERATED_" << getStructInitName(structObj) << "\n\n";
           }
 
           finalizeBaseFile(structFile);
@@ -3601,7 +3657,18 @@ namespace zsLib
                 if (!arg) continue;
                 if (!first) ss << ", ";
                 first = false;
-                ss << getAdoptFromCMethod(apiFile, method->hasModifier(Modifier_Optional), arg->mType) << "(" << getApiPath(apiFile) << ".callback_event_get_data(handle, " << index << "))";
+                bool isSimple = false;
+                bool isOptional = method->hasModifier(Modifier_Optional);
+                String basicTypeStr;
+                {
+                  auto basicType = arg->mType->toBasicType();
+                  if (basicType) {
+                    basicTypeStr = fixCCsType(basicType->mBaseType);
+                    if (("binary_t" != basicTypeStr) && ("string_t" != basicTypeStr) && ("raw_pointer_t" != basicTypeStr)) isSimple = true;
+                  }
+                }
+                bool needUnboxing = isSimple && (!isOptional);
+                ss << getAdoptFromCMethod(apiFile, isOptional || isSimple, arg->mType) << "(" << getApiPath(apiFile) << ".callback_event_get_data(handle, " << index << "))" << (needUnboxing ? (" ?? default(" + basicTypeStr + ")").c_str() : "");
               }
               ss << ");\n";
               ss << indentStr << "}\n";

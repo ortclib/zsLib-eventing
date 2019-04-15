@@ -192,12 +192,17 @@ namespace zsLib
                 String specialName = structType->getPathName();
                 if ("::zs::Any" == specialName) return "AnyPtr";
                 if ("::zs::Promise" == specialName) return "PromisePtr";
+
                 if ("::zs::exceptions::Exception" == specialName) return "::zsLib::Exception";
-                if ("::zs::exceptions::InvalidArgument" == specialName) return "::zsLib::Exceptions::InvalidArgument";
-                if ("::zs::exceptions::BadState" == specialName) return "::zsLib::Exceptions::BadState";
-                if ("::zs::exceptions::NotImplemented" == specialName) return "::zsLib::Exceptions::NotImplemented";
-                if ("::zs::exceptions::NotSupported" == specialName) return "::zsLib::Exceptions::NotSupported";
-                if ("::zs::exceptions::UnexpectedError" == specialName) return "::zsLib::Exceptions::UnexpectedError";
+
+                {
+                  auto exceptionList = GenerateHelper::getAllExceptions(nullptr);
+                  for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                    auto e = (*iter);
+                    if (("::zs::exceptions::" + e) == specialName) return "::zsLib::Exceptions::" + e;
+                  }
+                }
+
                 if ("::zs::Time" == specialName) return makeOptional(isOptional, "::zsLib::Time");
                 if ("::zs::Milliseconds" == specialName) return makeOptional(isOptional, "::zsLib::Milliseconds");
                 if ("::zs::Microseconds" == specialName) return makeOptional(isOptional, "::zsLib::Microseconds");

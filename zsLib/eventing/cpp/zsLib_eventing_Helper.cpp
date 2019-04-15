@@ -29,15 +29,11 @@ either expressed or implied, of the FreeBSD Project.
 
 */
 
-#ifdef WINUWP
-
 #ifdef __has_include
 #if __has_include(<winrt/windows.ui.core.h>)
 #include <winrt/windows.ui.core.h>
 #endif //__has_include(<winrt/windows.ui.core.h>)
 #endif //__has_include
-
-#endif //WINUWP
 
 #include <zsLib/eventing/internal/zsLib_eventing_Helper.h>
 
@@ -161,8 +157,6 @@ namespace zsLib
       internal::installRemoteEventingSettingsDefaults();
     }
 
-#ifdef WINUWP
-#ifdef CPPWINRT_VERSION
     //-------------------------------------------------------------------------
     void IHelper::setup(winrt::Windows::UI::Core::CoreDispatcher dispatcher) noexcept
     {
@@ -170,8 +164,6 @@ namespace zsLib
       internal::CryptoPPHelper::singleton();
       internal::installRemoteEventingSettingsDefaults();
     }
-#endif //CPPWINRT_VERSION
-#endif //WINUWP
 
     //-------------------------------------------------------------------------
     SecureByteBlockPtr IHelper::loadFile(const char *path) noexcept(false)

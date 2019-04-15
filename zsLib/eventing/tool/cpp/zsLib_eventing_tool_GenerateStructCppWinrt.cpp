@@ -601,6 +601,9 @@ namespace zsLib
           if (derives.end() != derives.find("::zs::exceptions::BadState")) {
             ss << helperFile.headerIndentStr_ << "static hresult_error ToCppWinrt(const ::zsLib::Exceptions::BadState &e) { return hresult_error(E_NOT_VALID_STATE, ToCppWinrt_String(e.message())); }\n";
           }
+          if (derives.end() != derives.find("::zs::exceptions::SyntaxError")) {
+            ss << helperFile.headerIndentStr_ << "static hresult_error ToCppWinrt(const ::zsLib::Exceptions::SyntaxError &e) { return hresult_error(MK_E_SYNTAX, ToCppWinrt_String(e.message())); }\n";
+          }
           if (derives.end() != derives.find("::zs::exceptions::NotImplemented")) {
             ss << helperFile.headerIndentStr_ << "static hresult_not_implemented ToCppWinrt(const ::zsLib::Exceptions::NotImplemented &e) { return hresult_not_implemented(ToCppWinrt_String(e.message())); }\n";
           }
@@ -610,6 +613,28 @@ namespace zsLib
           if (derives.end() != derives.find("::zs::exceptions::UnexpectedError")) {
             ss << helperFile.headerIndentStr_ << "static hresult_error ToCppWinrt(const ::zsLib::Exceptions::UnexpectedError &e) { return hresult_error(E_UNEXPECTED, ToCppWinrt_String(e.message())); }\n";
           }
+          if (derives.end() != derives.find("::zs::exceptions::RangeError")) {
+            ss << helperFile.headerIndentStr_ << "static hresult_out_of_bounds ToCppWinrt(const ::zsLib::Exceptions::RangeError &e) { return hresult_out_of_bounds(ToCppWinrt_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::ResourceError")) {
+            ss << helperFile.headerIndentStr_ << "static hresult_error ToCppWinrt(const ::zsLib::Exceptions::ResourceError &e) { return hresult_error(E_OUTOFMEMORY, ToCppWinrt_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::InvalidUsage")) {
+            ss << helperFile.headerIndentStr_ << "static hresult_error ToCppWinrt(const ::zsLib::Exceptions::InvalidUsage &e) { return hresult_illegal_method_call(ToCppWinrt_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::InvalidModification")) {
+            ss << helperFile.headerIndentStr_ << "static hresult_error ToCppWinrt(const ::zsLib::Exceptions::InvalidModification &e) { return hresult_illegal_state_change(ToCppWinrt_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::InternalError")) {
+            ss << helperFile.headerIndentStr_ << "static hresult_error ToCppWinrt(const ::zsLib::Exceptions::InternalError &e) { return hresult_error(E_ABORT, ToCppWinrt_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::NetworkError")) {
+            ss << helperFile.headerIndentStr_ << "static hresult_error ToCppWinrt(const ::zsLib::Exceptions::NetworkError &e) { return hresult_error(CS_E_NETWORK_ERROR, ToCppWinrt_String(e.message())); }\n";
+          }
+          if (derives.end() != derives.find("::zs::exceptions::InvalidAssumption")) {
+            ss << helperFile.headerIndentStr_ << "static hresult_error ToCppWinrt(const ::zsLib::Exceptions::NetworkError &e) { return hresult_error(NS_E_INVALID_REQUEST, ToCppWinrt_String(e.message())); }\n";
+          }
+
           ss << "\n";
         }
 
@@ -2127,7 +2152,7 @@ namespace zsLib
               auto throwType = (*iterThrows);
               if (!throwType) continue;
               implSS << "  } catch(const " << getCppType(throwType, GO{}) << " &e) {\n";
-              if (isDefaultExceptionType(throwType)) {
+              if (GenerateHelper::isDefaultExceptionType(throwType)) {
                 implSS << "    throw ::Internal::Helper::" << getToCppWinrtName(helperFile, throwType, GO{}) << "(e);\n";
               } else {
                 implSS << "    ::Internal::Helper::Throwers::singleton().customThrow(e);\n";
@@ -2621,26 +2646,6 @@ namespace zsLib
         }
 
         //---------------------------------------------------------------------
-        bool GenerateStructCppWinrt::isDefaultExceptionType(TypePtr type)
-        {
-          if (!type) return false;
-
-          auto structType = type->toStruct();
-          if (!structType) return false;
-
-          if (structType->mGenerics.size() > 0) return false;
-
-          if (!structType->hasModifier(Modifier_Special)) return false;
-
-          String comparison("::zs::exceptions::");
-          String specialName = structType->getPathName();
-
-          specialName = specialName.substr(0, comparison.length());
-
-          return comparison == specialName;
-        }
-
-        //---------------------------------------------------------------------
         String GenerateStructCppWinrt::getCppType(
                                                   TypePtr type,
                                                   const GenerationOptions &options
@@ -2648,6 +2653,7 @@ namespace zsLib
         {
           return GenerateStructHeader::getWrapperTypeString(options.isOptional(), type);
         }
+
         //---------------------------------------------------------------------
         String GenerateStructCppWinrt::getCppWinrtType(
                                                        const HelperFile &helperFile,
@@ -2691,12 +2697,22 @@ namespace zsLib
                 String specialName = structType->getPathName();
                 if ("::zs::Any" == specialName) return makeCppWinrtReferenceAndOptional("Windows::Foundation::IInspectable", options.getAmmended(GO::MakeNotOptional()));
                 if ("::zs::Promise" == specialName) return makeCppWinrtReferenceAndOptional("Windows::Foundation::IAsyncAction", options.getAmmended(GO::MakeNotOptional()));
+
                 if ("::zs::exceptions::Exception" == specialName) return makeCppWinrtReferenceAndOptional("hresult_error", options.getAmmended(GO::MakeNotOptional())); // E_FAIL
                 if ("::zs::exceptions::InvalidArgument" == specialName) return makeCppWinrtReferenceAndOptional("hresult_invalid_argument", options.getAmmended(GO::MakeNotOptional()));
+                if ("::zs::exceptions::SyntaxError" == specialName) return makeCppWinrtReferenceAndOptional("hresult_error", options.getAmmended(GO::MakeNotOptional()));   // E_NOT_VALID_STATE
                 if ("::zs::exceptions::BadState" == specialName) return makeCppWinrtReferenceAndOptional("hresult_error", options.getAmmended(GO::MakeNotOptional()));   // E_NOT_VALID_STATE
                 if ("::zs::exceptions::NotImplemented" == specialName) return makeCppWinrtReferenceAndOptional("hresult_not_implemented", options.getAmmended(GO::MakeNotOptional()));
                 if ("::zs::exceptions::NotSupported" == specialName) return makeCppWinrtReferenceAndOptional("hresult_error", options.getAmmended(GO::MakeNotOptional()));  // CO_E_NOT_SUPPORTED
                 if ("::zs::exceptions::UnexpectedError" == specialName) return makeCppWinrtReferenceAndOptional("hresult_error", options.getAmmended(GO::MakeNotOptional())); //E_UNEXPECTED
+                if ("::zs::exceptions::RangeError" == specialName) return makeCppWinrtReferenceAndOptional("hresult_out_of_bounds", options.getAmmended(GO::MakeNotOptional())); //E_UNEXPECTED
+                if ("::zs::exceptions::ResourceError" == specialName) return makeCppWinrtReferenceAndOptional("hresult_error", options.getAmmended(GO::MakeNotOptional())); //E_UNEXPECTED
+                if ("::zs::exceptions::InvalidUsage" == specialName) return makeCppWinrtReferenceAndOptional("hresult_illegal_method_call", options.getAmmended(GO::MakeNotOptional())); //E_UNEXPECTED
+                if ("::zs::exceptions::InvalidModification" == specialName) return makeCppWinrtReferenceAndOptional("hresult_illegal_state_change", options.getAmmended(GO::MakeNotOptional())); //E_UNEXPECTED
+                if ("::zs::exceptions::InternalError" == specialName) return makeCppWinrtReferenceAndOptional("hresult_error", options.getAmmended(GO::MakeNotOptional())); //E_UNEXPECTED
+                if ("::zs::exceptions::NetworkError" == specialName) return makeCppWinrtReferenceAndOptional("hresult_error", options.getAmmended(GO::MakeNotOptional())); //E_UNEXPECTED
+                if ("::zs::exceptions::InvalidAssumption" == specialName) return makeCppWinrtReferenceAndOptional("hresult_error", options.getAmmended(GO::MakeNotOptional())); //E_UNEXPECTED
+
                 if ("::zs::Time" == specialName) return makeCppWinrtReferenceAndOptionalIfOptional("Windows::Foundation::DateTime", options);
                 if ("::zs::Milliseconds" == specialName) return makeCppWinrtReferenceAndOptionalIfOptional("Windows::Foundation::TimeSpan", options);
                 if ("::zs::Microseconds" == specialName) return makeCppWinrtReferenceAndOptionalIfOptional("Windows::Foundation::TimeSpan", options);
@@ -2811,12 +2827,15 @@ namespace zsLib
                 String specialName = structType->getPathName();
                 if ("::zs::Any" == specialName) return nullptrStr;
                 if ("::zs::Promise" == specialName) return nullptrStr;
-                if ("::zs::exceptions::Exception" == specialName) return String();
-                if ("::zs::exceptions::InvalidArgument" == specialName) return String();
-                if ("::zs::exceptions::BadState" == specialName) return String();
-                if ("::zs::exceptions::NotImplemented" == specialName) return String();
-                if ("::zs::exceptions::NotSupported" == specialName) return String();
-                if ("::zs::exceptions::UnexpectedError" == specialName) return String();
+
+                {
+                  auto exceptionList = GenerateHelper::getAllExceptions("::zs::exceptions::");
+                  for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                    auto e = (*iter);
+                    if (e == specialName) return String();
+                  }
+                }
+
                 if ("::zs::Time" == specialName) return String();
                 if ("::zs::Milliseconds" == specialName) return String();
                 if ("::zs::Microseconds" == specialName) return String();
@@ -2907,12 +2926,15 @@ namespace zsLib
 
               if ("::zs::Any" == specialName) return simpleResult;
               if ("::zs::Promise" == specialName) return simpleResult;
-              if ("::zs::exceptions::Exception" == specialName) return simpleResult;
-              if ("::zs::exceptions::InvalidArgument" == specialName) return simpleResult;
-              if ("::zs::exceptions::BadState" == specialName) return simpleResult;
-              if ("::zs::exceptions::NotImplemented" == specialName) return simpleResult;
-              if ("::zs::exceptions::NotSupported" == specialName) return simpleResult;
-              if ("::zs::exceptions::UnexpectedError" == specialName) return simpleResult;
+
+              {
+                auto exceptionList = GenerateHelper::getAllExceptions("::zs::exceptions::");
+                for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                  auto e = (*iter);
+                  if (e == specialName) return simpleResult;
+                }
+              }
+
               if ("::zs::Time" == specialName) return simpleResult;
               if ("::zs::Milliseconds" == specialName) return prefixName + "Milliseconds";
               if ("::zs::Microseconds" == specialName) return prefixName + "Microseconds";
@@ -3033,12 +3055,15 @@ namespace zsLib
 
               if ("::zs::Any" == specialName) return;
               if ("::zs::Promise" == specialName) return;
-              if ("::zs::exceptions::Exception" == specialName) return;
-              if ("::zs::exceptions::InvalidArgument" == specialName) return;
-              if ("::zs::exceptions::BadState" == specialName) return;
-              if ("::zs::exceptions::NotImplemented" == specialName) return;
-              if ("::zs::exceptions::NotSupported" == specialName) return;
-              if ("::zs::exceptions::UnexpectedError" == specialName) return;
+
+              {
+                auto exceptionList = GenerateHelper::getAllExceptions("::zs::exceptions::");
+                for (auto iter = exceptionList.begin(); iter != exceptionList.end(); ++iter) {
+                  auto e = (*iter);
+                  if (e == specialName) return;
+                }
+              }
+
               if ("::zs::Time" == specialName) return;
               if ("::zs::Milliseconds" == specialName) return;
               if ("::zs::Microseconds" == specialName) return;
