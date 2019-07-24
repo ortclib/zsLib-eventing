@@ -166,6 +166,14 @@ namespace zsLib
     }
 
     //-------------------------------------------------------------------------
+    void IHelper::setup(winrt::Windows::System::DispatcherQueue dispatcher) noexcept
+    {
+      zsLib::IHelper::setup(dispatcher);
+      internal::CryptoPPHelper::singleton();
+      internal::installRemoteEventingSettingsDefaults();
+    }
+
+    //-------------------------------------------------------------------------
     SecureByteBlockPtr IHelper::loadFile(const char *path) noexcept(false)
     {
       String pathStr(path);

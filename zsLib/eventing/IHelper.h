@@ -31,9 +31,15 @@ either expressed or implied, of the FreeBSD Project.
 
 #pragma once
 
-#ifdef CPPWINRT_VERSION
+
+#ifdef __has_include
+#if __has_include(<winrt/windows.ui.core.h>)
 #include <winrt/windows.ui.core.h>
-#endif //CPPWINRT_VERSION
+#endif //__has_include(<winrt/windows.ui.core.h>)
+#if __has_include(<winrt/windows.system.h>)
+#include <winrt/windows.system.h>
+#endif //__has_include(<winrt/windows.system.h>)
+#endif //__has_include
 
 #include <zsLib/eventing/types.h>
 #include <zsLib/IHelper.h>
@@ -51,6 +57,7 @@ namespace zsLib
       static void setup() noexcept;
 #ifdef CPPWINRT_VERSION
       static void setup(winrt::Windows::UI::Core::CoreDispatcher dispatcher) noexcept;
+      static void setup(winrt::Windows::System::DispatcherQueue dispatcher) noexcept;
 #endif //CPPWINRT_VERSION
 
       static SecureByteBlockPtr loadFile(const char *path) noexcept(false); // throws StdError
