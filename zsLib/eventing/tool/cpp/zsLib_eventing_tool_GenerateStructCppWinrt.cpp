@@ -980,30 +980,11 @@ namespace zsLib
           cppSS << dashedStr;
           cppSS << "Windows::Foundation::IAsyncAction Internal::Helper::ToCppWinrt(::zsLib::PromisePtr promise)\n";
           cppSS << "{\n";
-          cppSS << "  struct Observer : public ::zsLib::IPromiseResolutionDelegate\n";
-          cppSS << "  {\n";
-          cppSS << "    Observer(HANDLE handle) : handle_(handle) {}\n";
-          cppSS << "\n";
-          cppSS << "    virtual void onPromiseResolved(PromisePtr promise) override { ::SetEvent(handle_); }\n";
-          cppSS << "\n";
-          cppSS << "    virtual void onPromiseRejected(PromisePtr promise) override { ::SetEvent(handle_); }\n";
-          cppSS << "\n";
-          cppSS << "  private:\n";
-          cppSS << "    HANDLE handle_;\n";
-          cppSS << "  };\n";
-          cppSS << "\n";
           cppSS << "  if (!promise) co_return;\n";
           cppSS << "\n";
-          cppSS << "  HANDLE handle = ::CreateEventEx(NULL, NULL, 0, EVENT_ALL_ACCESS);\n";
-          cppSS << "  auto observer = std::make_shared<Observer>(handle);";
-          cppSS << "  promise->then(observer);\n";
-          cppSS << "  promise->background();\n";
-          cppSS << "\n";
-          cppSS << "  co_await winrt::resume_on_signal(handle);\n";
-          cppSS << "  ::CloseHandle(handle);\n";
-          cppSS << "  handle = NULL;\n";
-          cppSS << "\n";
-          cppSS << "  if (promise->isRejected()) {\n";
+          cppSS << "  try {\n";
+          cppSS << "    co_await *promise;\n";
+          cppSS << "  } catch (AnyPtr&) {\n";
           cppSS << "    PromisePtr promiseBase = promise;\n";
 
           generateDefaultPromiseRejections(helperFile, "    ");
@@ -1061,44 +1042,22 @@ namespace zsLib
                 cppSS << getCppWinrtType(helperFile, templatedStruct, GO::MakeReturnResult()) << " Internal::Helper::" << getToCppWinrtName(helperFile, templatedStruct, GO{}) << "(shared_ptr< " << promiseWithStr << "< " << getCppType(resolveType, GO{}) << " > > promise)\n";
 
                 cppSS << "{\n";
-                cppSS << "  struct Observer : public ::zsLib::IPromiseResolutionDelegate\n";
-                cppSS << "  {\n";
-                cppSS << "    Observer(HANDLE handle) : handle_(handle) {}\n";
-                cppSS << "\n";
-                cppSS << "    virtual void onPromiseResolved(PromisePtr promise) override { ::SetEvent(handle_); }\n";
-                cppSS << "\n";
-                cppSS << "    virtual void onPromiseRejected(PromisePtr promise) override { ::SetEvent(handle_); }\n";
-                cppSS << "\n";
-                cppSS << "  private:\n";
-                cppSS << "    HANDLE handle_;\n";
-                cppSS << "  };\n";
-                cppSS << "\n";
                 cppSS << "  if (!promise) co_return " << getCppWinrtType(helperFile, resolveType, GO::MakeReturnResult()) << " " << nullStr << ";\n";
                 cppSS << "\n";
-                cppSS << "  HANDLE handle = ::CreateEventEx(NULL, NULL, 0, EVENT_ALL_ACCESS);\n";
-                cppSS << "  auto observer = std::make_shared<Observer>(handle);";
-                cppSS << "  promise->then(observer);\n";
-                cppSS << "  promise->background();\n";
-                cppSS << "\n";
-                cppSS << "  co_await winrt::resume_on_signal(handle);\n";
-                cppSS << "  ::CloseHandle(handle);\n";
-                cppSS << "  handle = NULL;\n";
-                cppSS << "\n";
-                cppSS << "  if (promise->isResolved()) {\n";
-                cppSS << "    auto value = promise->value();\n";
+                cppSS << "  try {\n";
+                cppSS << "    auto value = co_await *promise;\n";
                 cppSS << "    if (value) {\n";
                 cppSS << "      auto result = (::Internal::Helper::" << getToCppWinrtName(helperFile, resolveType, GO{}) << "(value));\n";
                 cppSS << "      co_return result;\n";
                 cppSS << "    }\n";
-                cppSS << "  }\n";
 
-                cppSS << "  if (promise->isRejected()) {\n";
+                cppSS << "  } catch (AnyPtr&) {\n";
                 cppSS << "    PromisePtr promiseBase = promise;\n";
 
                 if (rejectType) {
                   auto rejectTypeStr = rejectType->getPathName();
                   if ("::void" != rejectTypeStr) {
-                    generatePromiseRejection(helperFile, indentStr, rejectType);
+                    generatePromiseRejection(helperFile, "    ", rejectType);
                   }
                 }
                 generateDefaultPromiseRejections(helperFile, "    ");
